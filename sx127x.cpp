@@ -22,7 +22,7 @@ SX127x::SX127x(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName rst
     reset_pin.input();
     m_cs = 1;
     m_spi.format(8, 0);
-    m_spi.frequency(1000000);
+    m_spi.frequency(3000000);
     
     init();
 }
@@ -78,6 +78,24 @@ void SX127x::get_type()
             type = SX1272;
     }
 }
+
+void
+SX127x::ReadBuffer( uint8_t addr, uint8_t *buffer, uint8_t size )
+{
+    uint8_t i;
+    
+    m_cs = 0;
+    
+    m_spi.write(addr); // bit7 is low for reading from radio
+
+    for( i = 0; i < size; i++ )
+    {
+        buffer[i] = m_spi.write(0x00);
+    }
+    
+    m_cs = 1;
+}
+
 uint8_t SX127x::read_reg(uint8_t addr)
 {
     uint8_t ret;
@@ -143,6 +161,21 @@ void SX127x::write_reg(uint8_t addr, uint8_t data)
     m_cs = 1;   // Deselect the device
 }
 
+void SX127x::WriteBuffer( uint8_t addr, uint8_t *buffer, uint8_t size )
+{
+    uint8_t i;
+
+    m_cs = 0;   // Select the device by seting chip select low
+
+    m_spi.write(addr | 0x80); // bit7 is high for writing to radio
+    for( i = 0; i < size; i++ )
+    {
+        m_spi.write(buffer[i]);
+    }
+
+    m_cs = 1;   // Deselect the device
+}
+
 void SX127x::lora_write_fifo(uint8_t len)
 {
     int i;
@@ -166,6 +199,48 @@ void SX127x::lora_read_fifo(uint8_t len)
     }
     m_cs = 1;
 }
+
+void
+SX127x::SetLoRaOn( bool enable )
+{   
+    set_opmode(RF_OPMODE_SLEEP);
+
+    if (enable)
+    {   
+        RegOpMode.bits.LongRangeMode = 1;
+        write_reg(REG_OPMODE, RegOpMode.octet);
+        
+        /*RegOpMode.octet = read_reg(REG_OPMODE);
+        printf("setloraon:%02x\r\n", RegOpMode.octet);*/
+        
+
+        /*                                // RxDone               RxTimeout                   FhssChangeChannel           CadDone
+        SX1272LR->RegDioMapping1 = RFLR_DIOMAPPING1_DIO0_00 | RFLR_DIOMAPPING1_DIO1_00 | RFLR_DIOMAPPING1_DIO2_00 | RFLR_DIOMAPPING1_DIO3_00;
+                                        // CadDetected          ModeReady
+        SX1272LR->RegDioMapping2 = RFLR_DIOMAPPING2_DIO4_00 | RFLR_DIOMAPPING2_DIO5_00;
+        SX1272WriteBuffer( REG_LR_DIOMAPPING1, &SX1272LR->RegDioMapping1, 2 );*/
+        RegDioMapping1.bits.Dio0Mapping = 0;    // DIO0 to RxDone
+        RegDioMapping1.bits.Dio1Mapping = 0;
+        write_reg(REG_DIOMAPPING1, RegDioMapping1.octet);
+        
+        // todo: read LoRa regsiters
+        //SX1272ReadBuffer( REG_LR_OPMODE, SX1272Regs + 1, 0x70 - 1 );
+    }
+    else
+    {
+        RegOpMode.bits.LongRangeMode = 0;
+        write_reg(REG_OPMODE, RegOpMode.octet);
+        
+        /*RegOpMode.octet = read_reg(REG_OPMODE);
+        printf("setloraoff:%02x\r\n", RegOpMode.octet);*/
+        
+        // todo: read FSK regsiters
+        //SX1272ReadBuffer( REG_OPMODE, SX1272Regs + 1, 0x70 - 1 );
+    }
+    
+    set_opmode(RF_OPMODE_STANDBY);
+}
+
 
 void SX127x::set_opmode(chip_mode_e mode)
 {

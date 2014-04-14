@@ -21,9 +21,9 @@
 
 #define XTAL_FREQ   32000000
 
-#define FREQ_STEP_MHZ     61.03515625e-6
-#define FREQ_STEP_KHZ     61.03515625e-3
-#define FREQ_STEP_HZ      61.03515625
+#define FREQ_STEP_MHZ     61.03515625e-6    // 32 / (2^19)
+#define FREQ_STEP_KHZ     61.03515625e-3    // 32e3 / (2^19)
+#define FREQ_STEP_HZ      61.03515625       // 32e6 / (2^19)
 
 #define MHZ_TO_FRF(m)   (m / FREQ_STEP_MHZ)
 
@@ -337,12 +337,26 @@ class SX127x {
         uint8_t read_reg(uint8_t addr);
         uint16_t read_u16(uint8_t addr);
         
+        /** read register from radio. from an arbitrary amount of registers following the first
+         * @param addr register address
+         * @param buffer the read values will be placed here
+         * @param size how many registers to read
+         */        
+        void ReadBuffer( uint8_t addr, uint8_t *buffer, uint8_t size );
+        
         /** write register to radio
          * @param addr register address
          * @param data byte to write
          */
         void write_reg(uint8_t addr, uint8_t data);
         void write_reg_u24(uint8_t addr, uint32_t data);
+        
+        /** write register(s) to radio, to an arbitrary amount of registers following first
+         * @param addr register address
+         * @param buffer byte(s) to write
+         * @param size count of registers to write to
+         */
+        void WriteBuffer( uint8_t addr, uint8_t *buffer, uint8_t size );
         
         /** transmit a packet
          * @param len size of packet
@@ -361,27 +375,39 @@ class SX127x {
          */
         void lora_read_fifo(uint8_t len);
         
+        /** fills radio FIFO with payload contents, prior to transmission
+         * @param len count of bytes to put into FIFO
+         * @note tx_buf[] should contain desired payload (to send) prior to calling
+         */
         void lora_write_fifo(uint8_t len);
         
         service_action_e service(void); // (SLIH) ISR bottom half 
         
+        /** CodingRate: how much FEC to encoding onto packet */
         uint8_t getCodingRate(bool from_rx);    // false:transmitted, true:last recevied packet
         void setCodingRate(uint8_t cr);
         
+        /** HeaderMode: explicit mode sents CodingRate and payload length, implicit mode requires assumption by receiver */
         bool getHeaderMode(void);
         void setHeaderMode(bool hm);
         
+        /** bandwidth: SX1272 has three bandwidths. SX1276 adds more narrower bandwidths. */
         uint8_t getBw(void);
         void setBw(uint8_t bw);
         
+        /** spreading factor: trade-off between data rate and processing gain (link budget) */
         uint8_t getSf(void);
         void setSf(uint8_t sf);        
         
+        /** enable CRC in transmitted packet */
         bool getRxPayloadCrcOn(void);
         void setRxPayloadCrcOn(bool);
         
         bool getAgcAutoOn(void);
         void setAgcAutoOn(bool);
+        
+        /* *switch between FSK or LoRa modes */
+        void SetLoRaOn(bool);
         
         /*****************************************************/
         
@@ -431,19 +457,22 @@ class SX127x {
         // frequency hopping table
         const uint32_t *frfs;
         
+        InterruptIn dio0;
+        InterruptIn dio1;
+        DigitalOut femcps;  // LF rf switch
+        DigitalOut femctx;  // HF rf switch
+        
     private:
         SPI m_spi;
         DigitalOut m_cs;
         DigitalInOut reset_pin;
-        DigitalOut femcps;  // LF rf switch
-        DigitalOut femctx;  // HF rf switch
+
         //void dio0_callback(void);
         bool HF;    // sx1272 is always HF
         void set_nb_trig_peaks(int);
         
     protected:
-        InterruptIn dio0;
-        InterruptIn dio1;
+
         FunctionPointer _callback_rx;        
 };
 
