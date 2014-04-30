@@ -49,9 +49,7 @@ void SX127x::init()
         write_reg(REG_OPMODE, RegOpMode.octet);
     }
     
-    RegModemConfig.octet = read_reg(REG_LR_MODEMCONFIG);
-    RegModemConfig2.octet = read_reg(REG_LR_MODEMCONFIG2);
-    RegTest31.octet = read_reg(REG_LR_TEST31);
+
     
     get_type();
     
@@ -59,8 +57,7 @@ void SX127x::init()
     RegPaConfig.bits.PaSelect = 1;
     write_reg(REG_PACONFIG, RegPaConfig.octet);
     
-    // CRC for TX is disabled by default
-    setRxPayloadCrcOn(true);
+
 }
 
 void SX127x::get_type()
@@ -106,6 +103,25 @@ uint8_t SX127x::read_reg(uint8_t addr)
  
     // Send a dummy byte to receive the contents of register
     ret = m_spi.write(0x00);
+ 
+    // Deselect the device
+    m_cs = 1;
+    
+    return ret;
+}
+
+int16_t SX127x::read_s16(uint8_t addr)
+{
+    int16_t ret;
+    // Select the device by seting chip select low
+    m_cs = 0;
+
+    m_spi.write(addr); // bit7 is low for reading from radio
+ 
+    // Send a dummy byte to receive the contents of register
+    ret = m_spi.write(0x00);
+    ret <<= 8;
+    ret += m_spi.write(0x00);
  
     // Deselect the device
     m_cs = 1;
@@ -176,72 +192,6 @@ void SX127x::WriteBuffer( uint8_t addr, uint8_t *buffer, uint8_t size )
     m_cs = 1;   // Deselect the device
 }
 
-void SX127x::lora_write_fifo(uint8_t len)
-{
-    int i;
-    
-    m_cs = 0;
-    m_spi.write(REG_FIFO | 0x80); // bit7 is high for writing to radio
-    for (i = 0; i < len; i++) {
-        m_spi.write(tx_buf[i]);
-    }
-    m_cs = 1;
-}
-
-void SX127x::lora_read_fifo(uint8_t len)
-{
-    int i;
-     
-    m_cs = 0;
-    m_spi.write(REG_FIFO); // bit7 is low for reading from radio
-    for (i = 0; i < len; i++) {
-        rx_buf[i] = m_spi.write(0);
-    }
-    m_cs = 1;
-}
-
-void
-SX127x::SetLoRaOn( bool enable )
-{   
-    set_opmode(RF_OPMODE_SLEEP);
-
-    if (enable)
-    {   
-        RegOpMode.bits.LongRangeMode = 1;
-        write_reg(REG_OPMODE, RegOpMode.octet);
-        
-        /*RegOpMode.octet = read_reg(REG_OPMODE);
-        printf("setloraon:%02x\r\n", RegOpMode.octet);*/
-        
-
-        /*                                // RxDone               RxTimeout                   FhssChangeChannel           CadDone
-        SX1272LR->RegDioMapping1 = RFLR_DIOMAPPING1_DIO0_00 | RFLR_DIOMAPPING1_DIO1_00 | RFLR_DIOMAPPING1_DIO2_00 | RFLR_DIOMAPPING1_DIO3_00;
-                                        // CadDetected          ModeReady
-        SX1272LR->RegDioMapping2 = RFLR_DIOMAPPING2_DIO4_00 | RFLR_DIOMAPPING2_DIO5_00;
-        SX1272WriteBuffer( REG_LR_DIOMAPPING1, &SX1272LR->RegDioMapping1, 2 );*/
-        RegDioMapping1.bits.Dio0Mapping = 0;    // DIO0 to RxDone
-        RegDioMapping1.bits.Dio1Mapping = 0;
-        write_reg(REG_DIOMAPPING1, RegDioMapping1.octet);
-        
-        // todo: read LoRa regsiters
-        //SX1272ReadBuffer( REG_LR_OPMODE, SX1272Regs + 1, 0x70 - 1 );
-    }
-    else
-    {
-        RegOpMode.bits.LongRangeMode = 0;
-        write_reg(REG_OPMODE, RegOpMode.octet);
-        
-        /*RegOpMode.octet = read_reg(REG_OPMODE);
-        printf("setloraoff:%02x\r\n", RegOpMode.octet);*/
-        
-        // todo: read FSK regsiters
-        //SX1272ReadBuffer( REG_OPMODE, SX1272Regs + 1, 0x70 - 1 );
-    }
-    
-    set_opmode(RF_OPMODE_STANDBY);
-}
-
-
 void SX127x::set_opmode(chip_mode_e mode)
 {
     RegOpMode.bits.Mode = mode;
@@ -286,249 +236,6 @@ float SX127x::get_frf_MHz(void)
     return MHz;
 }
 
-uint8_t SX127x::getCodingRate(bool from_rx)
-{
-    if (from_rx) {
-        // expected RegModemStatus was read on RxDone interrupt
-        return RegModemStatus.bits.RxCodingRate;    
-    } else {    // transmitted coding rate...
-        if (type == SX1276)
-            return RegModemConfig.sx1276bits.CodingRate;
-        else if (type == SX1272)
-            return RegModemConfig.sx1272bits.CodingRate;
-        else
-            return 0;
-    }
-}
-
-void SX127x::setCodingRate(uint8_t cr)
-{
-    if (type == SX1276)
-        RegModemConfig.sx1276bits.CodingRate = cr;
-    else if (type == SX1272)
-        RegModemConfig.sx1272bits.CodingRate = cr;
-    else
-        return;
-        
-    write_reg(REG_LR_MODEMCONFIG, RegModemConfig.octet);
-}
-
-bool SX127x::getHeaderMode(void)
-{
-    if (type == SX1276)
-        return RegModemConfig.sx1276bits.ImplicitHeaderModeOn;
-    else if (type == SX1272)
-        return RegModemConfig.sx1272bits.ImplicitHeaderModeOn;
-    else
-        return false;
-}
-
-void SX127x::setHeaderMode(bool hm)
-{
-    if (type == SX1276)
-        RegModemConfig.sx1276bits.ImplicitHeaderModeOn = hm;
-    else if (type == SX1272)
-        RegModemConfig.sx1272bits.ImplicitHeaderModeOn = hm;
-    else
-        return;
-        
-    write_reg(REG_LR_MODEMCONFIG, RegModemConfig.octet);
-}
-
-uint8_t SX127x::getBw(void)
-{
-    if (type == SX1276)
-        return RegModemConfig.sx1276bits.Bw;
-    else if (type == SX1272)
-        return RegModemConfig.sx1272bits.Bw;
-    else
-        return 0;
-}
-
-void SX127x::setBw(uint8_t bw)
-{
-    if (type == SX1276)
-        RegModemConfig.sx1276bits.Bw = bw;
-    else if (type == SX1272) {
-        RegModemConfig.sx1272bits.Bw = bw;
-        if (RegModemConfig2.sx1272bits.SpreadingFactor > 10)
-            RegModemConfig.sx1272bits.LowDataRateOptimize = 1;
-        else
-            RegModemConfig.sx1272bits.LowDataRateOptimize = 0;
-    } else
-        return;
-        
-    write_reg(REG_LR_MODEMCONFIG, RegModemConfig.octet);
-}
-
-uint8_t SX127x::getSf(void)
-{
-    // spreading factor same between sx127[26]
-    return RegModemConfig2.sx1276bits.SpreadingFactor;
-}
-
-void SX127x::set_nb_trig_peaks(int n)
-{
-    RegTest31.bits.detect_trig_same_peaks_nb = n;
-    write_reg(REG_LR_TEST31, RegTest31.octet);
-}
-
-void SX127x::setSf(uint8_t sf)
-{
-    // false detections vs missed detections tradeoff
-    switch (sf) {
-        case 6:
-            set_nb_trig_peaks(3);
-            break;
-        case 7:
-            set_nb_trig_peaks(4);
-            break;
-        default:
-            set_nb_trig_peaks(5);
-            break;
-    }
-    
-    // write register at 0x37 with value 0xc if at SF6
-    if (sf < 7)
-        write_reg(REG_LR_DETECTION_THRESHOLD, 0x0c);
-    else
-        write_reg(REG_LR_DETECTION_THRESHOLD, 0x0a);
-    
-    RegModemConfig2.sx1276bits.SpreadingFactor = sf; // spreading factor same between sx127[26]
-    write_reg(REG_LR_MODEMCONFIG2, RegModemConfig2.octet);
-    
-    if (type == SX1272) {
-        if (sf > 10 && RegModemConfig.sx1272bits.Bw == 0)   // if bw=125KHz and sf11 or sf12
-            RegModemConfig.sx1272bits.LowDataRateOptimize = 1;
-        else
-            RegModemConfig.sx1272bits.LowDataRateOptimize = 0;
-        write_reg(REG_LR_MODEMCONFIG, RegModemConfig.octet);
-    } else if (type == SX1276) {
-        if (sf > 10 && RegModemConfig.sx1272bits.Bw == 0)   // if bw=125KHz and sf11 or sf12
-            RegModemConfig3.sx1276bits.LowDataRateOptimize = 1;
-        else
-            RegModemConfig3.sx1276bits.LowDataRateOptimize = 0;
-        write_reg(REG_LR_MODEMCONFIG3, RegModemConfig3.octet);
-    }
-}
-        
-bool SX127x::getRxPayloadCrcOn(void)
-{
-    if (type == SX1276)
-        return RegModemConfig2.sx1276bits.RxPayloadCrcOn;
-    else if (type == SX1272)
-        return RegModemConfig.sx1272bits.RxPayloadCrcOn;
-    else
-        return 0;
-}
-
-void SX127x::setRxPayloadCrcOn(bool on)
-{
-    if (type == SX1276) {
-        RegModemConfig2.sx1276bits.RxPayloadCrcOn = on;
-        write_reg(REG_LR_MODEMCONFIG2, RegModemConfig2.octet);
-    } else if (type == SX1272) {
-        RegModemConfig.sx1272bits.RxPayloadCrcOn = on;
-        write_reg(REG_LR_MODEMCONFIG, RegModemConfig.octet);
-    }   
-}
-
-bool SX127x::getAgcAutoOn(void)
-{
-    if (type == SX1276) {
-        RegModemConfig3.octet = read_reg(REG_LR_MODEMCONFIG3);
-        return RegModemConfig3.sx1276bits.AgcAutoOn;
-    } else if (type == SX1272) {
-        RegModemConfig2.octet = read_reg(REG_LR_MODEMCONFIG2);
-        return RegModemConfig2.sx1272bits.AgcAutoOn;
-    } else
-        return 0;
-}
-
-void SX127x::setAgcAutoOn(bool on)
-{
-    if (type == SX1276) {
-        RegModemConfig3.sx1276bits.AgcAutoOn = on;
-        write_reg(REG_LR_MODEMCONFIG3, RegModemConfig3.octet);
-    } else if (type == SX1272) {
-        RegModemConfig2.sx1272bits.AgcAutoOn = on;
-        write_reg(REG_LR_MODEMCONFIG2, RegModemConfig2.octet);
-    }
-    
-}
-
-void SX127x::lora_start_tx(uint8_t len)
-{
-    if (type == SX1276) {
-        // PA_BOOST on LF, RFO on HF
-        if (HF) {
-            if (RegPaConfig.bits.PaSelect) {
-                RegPaConfig.bits.PaSelect = 0;
-                write_reg(REG_PACONFIG, RegPaConfig.octet);
-            }                
-        } else { // LF...
-            if (!RegPaConfig.bits.PaSelect) {
-                RegPaConfig.bits.PaSelect = 1;
-                write_reg(REG_PACONFIG, RegPaConfig.octet);
-            }        
-        }
-    } else if (type == SX1272) {
-        // always PA_BOOST
-        if (!RegPaConfig.bits.PaSelect) {
-            RegPaConfig.bits.PaSelect = 1;
-            write_reg(REG_PACONFIG, RegPaConfig.octet);
-        }
-    }
-                    
-                    
-    // DIO0 to TxDone
-    if (RegDioMapping1.bits.Dio0Mapping != 1) {
-        RegDioMapping1.bits.Dio0Mapping = 1;
-        write_reg(REG_DIOMAPPING1, RegDioMapping1.octet);
-    }
-    
-    // set FifoPtrAddr to FifoTxPtrBase
-    write_reg(REG_LR_FIFOADDRPTR, read_reg(REG_LR_FIFOTXBASEADDR));
-    
-    // write PayloadLength bytes to fifo
-    lora_write_fifo(len);
-
-    if (HF)
-        femctx = 1;
-    else
-        femcps = 0;
-        
-    // radio doesnt provide FhssChangeChannel with channel=0 for TX    
-    if (RegHopPeriod > 0)
-        write_reg_u24(REG_FRFMSB, frfs[0]);
-        
-    set_opmode(RF_OPMODE_TRANSMITTER);
-}
-
-
-
-void SX127x::lora_start_rx()
-{
-    if (HF)
-        femctx = 0;
-    else
-        femcps = 1;
-        
-    if (RegDioMapping1.bits.Dio0Mapping != 0) {
-        RegDioMapping1.bits.Dio0Mapping = 0;    // DIO0 to RxDone
-        write_reg(REG_DIOMAPPING1, RegDioMapping1.octet);
-    }
-    
-    write_reg(REG_LR_FIFOADDRPTR, read_reg(REG_LR_FIFORXBASEADDR));
-    
-    // shouldn't be necessary, radio should provide FhssChangeChannel with channel=0 for RX  
-    if (RegHopPeriod > 0)
-        write_reg_u24(REG_FRFMSB, frfs[0]);
-    
-    set_opmode(RF_OPMODE_RECEIVER);
-}
-
-
 void SX127x::hw_reset()
 {
     /* only a french-swiss design would have hi-Z deassert */
@@ -539,68 +246,3 @@ void SX127x::hw_reset()
     wait(0.05);
 }
 
-service_action_e SX127x::service()
-{
-    
-    if (RegOpMode.bits.Mode == RF_OPMODE_RECEIVER) {
-        if (poll_vh) {
-            RegIrqFlags.octet = read_reg(REG_LR_IRQFLAGS);
-            if (RegIrqFlags.bits.ValidHeader) {
-                RegIrqFlags.octet = 0;
-                RegIrqFlags.bits.ValidHeader = 1;
-                write_reg(REG_LR_IRQFLAGS, RegIrqFlags.octet);
-                printf("VH\r\n");
-            }
-        }
-    }
-    
-    // FhssChangeChannel
-    if (RegDioMapping1.bits.Dio1Mapping == 1) {
-        if (dio1) {
-            RegHopChannel.octet = read_reg(REG_LR_HOPCHANNEL);    
-            write_reg_u24(REG_FRFMSB, frfs[RegHopChannel.bits.FhssPresentChannel]);
-            printf("hopch:%d\r\n", RegHopChannel.bits.FhssPresentChannel);
-            RegIrqFlags.octet = 0;
-            RegIrqFlags.bits.FhssChangeChannel = 1;
-            write_reg(REG_LR_IRQFLAGS, RegIrqFlags.octet);
-            
-        }
-    }
-    
-    if (dio0 == 0)
-        return SERVICE_NONE;
-        
-    switch (RegDioMapping1.bits.Dio0Mapping) {
-        case 0: // RxDone
-            /* user checks for CRC error in IrqFlags */
-            RegIrqFlags.octet = read_reg(REG_LR_IRQFLAGS);  // save flags
-            RegHopChannel.octet = read_reg(REG_LR_HOPCHANNEL);
-            if (RegIrqFlags.bits.FhssChangeChannel) {
-                write_reg_u24(REG_FRFMSB, frfs[RegHopChannel.bits.FhssPresentChannel]);
-            }
-            //printf("[%02x]", RegIrqFlags.octet);
-            write_reg(REG_LR_IRQFLAGS, RegIrqFlags.octet); // clear flags in radio
-            
-            /* any register of interest on received packet is read(saved) here */        
-            RegModemStatus.octet = read_reg(REG_LR_MODEMSTAT);          
-            RegPktSnrValue = read_reg(REG_LR_PKTSNRVALUE);
-            RegPktRssiValue = read_reg(REG_LR_PKTRSSIVALUE);
-            RegRxNbBytes = read_reg(REG_LR_RXNBBYTES);
-    
-            write_reg(REG_LR_FIFOADDRPTR, read_reg(REG_LR_FIFORXCURRENTADDR));
-            lora_read_fifo(RegRxNbBytes);
-            return SERVICE_READ_FIFO;
-        case 1: // TxDone
-            if (HF)
-                femctx = 0;
-            else
-                femcps = 1;
-
-            RegIrqFlags.octet = 0;
-            RegIrqFlags.bits.TxDone = 1;
-            write_reg(REG_LR_IRQFLAGS, RegIrqFlags.octet);                  
-            return SERVICE_TX_DONE;        
-    } // ...switch (RegDioMapping1.bits.Dio0Mapping)
-    
-    return SERVICE_ERROR;
-}
