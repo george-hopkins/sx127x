@@ -15,9 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
-//SX127x_fsk::SX127x_fsk(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName rst, PinName dio_0, PinName dio_1, PinName fem_ctx, PinName fem_cps) : SX127x(mosi, miso, sclk, cs, rst, dio_0, dio_1, fem_ctx, fem_cps)
-SX127x_fsk::SX127x_fsk(SX127x r) : m_xcvr(r)
+
+SX127x_fsk::SX127x_fsk(SX127x& r) : m_xcvr(r)
 {
 }
 
@@ -32,8 +31,9 @@ void SX127x_fsk::write_fifo(uint8_t len)
     m_xcvr.m_cs = 0;
     m_xcvr.m_spi.write(REG_FIFO | 0x80); // bit7 is high for writing to radio
     
-    if (!m_xcvr.RegOpMode.bits.LongRangeMode && RegPktConfig1.bits.PacketFormatVariable)
+    if (!m_xcvr.RegOpMode.bits.LongRangeMode && RegPktConfig1.bits.PacketFormatVariable) {
         m_xcvr.m_spi.write(len);
+    }
     
     for (i = 0; i < len; i++) {
         m_xcvr.m_spi.write(m_xcvr.tx_buf[i]);
@@ -49,13 +49,28 @@ void SX127x_fsk::enable()
     m_xcvr.write_reg(REG_OPMODE, m_xcvr.RegOpMode.octet);
     wait(0.01);
     
-    /*RegOpMode.octet = read_reg(REG_OPMODE);
-    printf("setloraoff:%02x\r\n", RegOpMode.octet);*/
-    
-    // todo: read FSK regsiters
-    //SX1272ReadBuffer( REG_OPMODE, SX1272Regs + 1, 0x70 - 1 );
     RegPktConfig1.octet = m_xcvr.read_reg(REG_FSK_PACKETCONFIG1);
     RegPktConfig2.word = m_xcvr.read_u16(REG_FSK_PACKETCONFIG2);
+    RegRxConfig.octet = m_xcvr.read_u16(REG_FSK_RXCONFIG);
+    RegPreambleDetect.octet = m_xcvr.read_reg(REG_FSK_PREAMBLEDETECT);
+    RegSyncConfig.octet = m_xcvr.read_reg(REG_FSK_SYNCCONFIG);
+    RegFifoThreshold.octet = m_xcvr.read_reg(REG_FSK_FIFOTHRESH);
+    RegAfcFei.octet = m_xcvr.read_reg(REG_FSK_AFCFEI);
+    
+    if (!RegFifoThreshold.bits.TxStartCondition) {
+        RegFifoThreshold.bits.TxStartCondition = 1; // start TX on fifoEmpty==0
+        m_xcvr.write_reg(REG_FSK_FIFOTHRESH, RegFifoThreshold.octet);
+    }
+    
+    if (RegSyncConfig.bits.AutoRestartRxMode != 1) {
+        RegSyncConfig.bits.AutoRestartRxMode = 1;
+        m_xcvr.write_reg(REG_FSK_SYNCCONFIG, RegSyncConfig.octet);
+    }
+    
+    if (RegPreambleDetect.bits.PreambleDetectorTol != 10) {
+        RegPreambleDetect.bits.PreambleDetectorTol = 10;
+        m_xcvr.write_reg(REG_FSK_PREAMBLEDETECT, RegPreambleDetect.octet);
+    }
     
     m_xcvr.set_opmode(RF_OPMODE_STANDBY);     
 }
@@ -91,7 +106,7 @@ void SX127x_fsk::ComputeRxBwMantExp( uint32_t rxBwValue, uint8_t* mantisse, uint
 
 uint32_t SX127x_fsk::get_rx_bw_hz(uint8_t addr)
 {
-    FSKRegRxBw_t reg_bw;
+    RegRxBw_t reg_bw;
     uint8_t mantissa;
     
     if (m_xcvr.RegOpMode.bits.LongRangeMode)
@@ -151,7 +166,7 @@ void SX127x_fsk::set_rx_dcc_bw_hz(uint32_t bw_hz, char afc)
 void SX127x_fsk::start_tx(uint16_t arg_len)
 {
     uint16_t pkt_buf_len;
-    FSKRegIrqFlags2_t RegIrqFlags2;
+    RegIrqFlags2_t RegIrqFlags2;
     int maxlen = FSK_FIFO_SIZE-1;
     
     if (m_xcvr.RegOpMode.bits.Mode == RF_OPMODE_RECEIVER) {
@@ -164,7 +179,6 @@ void SX127x_fsk::start_tx(uint16_t arg_len)
     }
 
     if (RegPktConfig1.bits.PacketFormatVariable) {
-        printf("variable-fmt %d\r\n", arg_len);
         pkt_buf_len = arg_len;
     } else {
         pkt_buf_len = RegPktConfig2.bits.PayloadLength;
@@ -183,7 +197,6 @@ void SX127x_fsk::start_tx(uint16_t arg_len)
                 printf("var-oversized %d\r\n", pkt_buf_len);
             } else {
                 //setup_FifoLevel(NO_EDGE); // disable
-                printf("var-write-fifo %d\r\n", pkt_buf_len);
                 write_fifo(pkt_buf_len);
                 //remaining_ = 0; // all was sent
             }
@@ -207,6 +220,20 @@ void SX127x_fsk::start_tx(uint16_t arg_len)
     
 }
 
+void SX127x_fsk::config_dio0_for_pktmode_rx()
+{
+    if (RegPktConfig1.bits.CrcOn) {
+        if (m_xcvr.RegDioMapping1.bits.Dio0Mapping != 1) {
+            m_xcvr.RegDioMapping1.bits.Dio0Mapping = 1; // to CrcOk
+            m_xcvr.write_reg(REG_DIOMAPPING1, m_xcvr.RegDioMapping1.octet);
+        }
+    } else { // Crc Off, use PayloadReady
+        if (m_xcvr.RegDioMapping1.bits.Dio0Mapping != 0) {
+            m_xcvr.RegDioMapping1.bits.Dio0Mapping = 0; // to PayloadReady
+            m_xcvr.write_reg(REG_DIOMAPPING1, m_xcvr.RegDioMapping1.octet);
+        }
+    }
+}
 
 void SX127x_fsk::start_rx()
 {
@@ -218,6 +245,9 @@ void SX127x_fsk::start_rx()
         m_xcvr.set_opmode(RF_OPMODE_STANDBY);
         wait(0.01);
     }
+    
+    config_dio0_for_pktmode_rx();
+    
     m_xcvr.set_opmode(RF_OPMODE_RECEIVER);        
 }
 
@@ -230,17 +260,19 @@ service_action_e SX127x_fsk::service()
             m_xcvr.set_opmode(RF_OPMODE_STANDBY);
             return SERVICE_TX_DONE;
         }
-    } else if (m_xcvr.RegOpMode.bits.Mode == RF_OPMODE_RECEIVER) {
-        uint8_t len;
+    } else if (m_xcvr.RegOpMode.bits.Mode == RF_OPMODE_RECEIVER && m_xcvr.dio0) {
+        if (RegRxConfig.bits.AfcAutoOn)
+            RegAfcValue = m_xcvr.read_s16(REG_FSK_AFCMSB);
+            
         if (RegPktConfig1.bits.PacketFormatVariable) {
-            len = m_xcvr.read_reg(REG_FIFO);
+            rx_buf_length = m_xcvr.read_reg(REG_FIFO);
         } else {
-            len = RegPktConfig2.bits.PayloadLength;
+            rx_buf_length = RegPktConfig2.bits.PayloadLength;
         }
         
         m_xcvr.m_cs = 0;
         m_xcvr.m_spi.write(REG_FIFO); // bit7 is low for reading from radio
-        for (i = 0; i < len; i++) {
+        for (i = 0; i < rx_buf_length; i++) {
             m_xcvr.rx_buf[i] = m_xcvr.m_spi.write(0);
         }
         m_xcvr.m_cs = 1;

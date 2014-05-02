@@ -136,7 +136,7 @@ typedef union {
 class SX127x_lora {
     public:
         //SX127x_lora(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName rst, PinName dio_0, PinName dio_1, PinName fem_ctx, PinName fem_cps);
-        SX127x_lora(SX127x r);
+        SX127x_lora(SX127x& r);
         
         ~SX127x_lora();
         
@@ -211,6 +211,6 @@ class SX127x_lora {
         RegTest31_t         RegTest31;              // 0x31
         
     private:
-        SX127x m_xcvr;
+        SX127x& m_xcvr;
         void set_nb_trig_peaks(int);                                                         
 };

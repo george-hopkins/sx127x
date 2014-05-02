@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-//SX127x_lora::SX127x_lora(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName rst, PinName dio_0, PinName dio_1, PinName fem_ctx, PinName fem_cps) : SX127x(mosi, miso, sclk, cs, rst, dio_0, dio_1, fem_ctx, fem_cps)
-SX127x_lora::SX127x_lora(SX127x r) : m_xcvr(r)
+SX127x_lora::SX127x_lora(SX127x& r) : m_xcvr(r)
 {
     RegModemConfig.octet = m_xcvr.read_reg(REG_LR_MODEMCONFIG);
     RegModemConfig2.octet = m_xcvr.read_reg(REG_LR_MODEMCONFIG2);

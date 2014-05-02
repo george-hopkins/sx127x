@@ -80,7 +80,7 @@ typedef union {
         uint8_t RestartRxOnCollision    : 1;    // 7
     } bits;
     uint8_t octet;
-} FSKRegRxConfig_t;
+} RegRxConfig_t;
 
 
 typedef union {
@@ -93,7 +93,7 @@ typedef union {
         uint8_t unused        : 3;  // 5,6,7 
     } bits;
     uint8_t octet;
-} FSKRegAfcFei_t;
+} RegAfcFei_t;
 
 
 typedef union {
@@ -102,7 +102,7 @@ typedef union {
         uint8_t RssiOffset      : 5;    // 3,4,5,6,7
     } bits;
     uint8_t octet;
-} FSKRegRssiConfig_t;
+} RegRssiConfig_t;
 
 typedef union {
     struct {    // sx1272 register 0x12
@@ -114,7 +114,7 @@ typedef union {
         uint8_t reserved        : 1;    // 7 
     } bits;
     uint8_t octet;
-} FSKRegRxBw_t;
+} RegRxBw_t;
 
 typedef union {
     struct {    // sx1272 register 0x14
@@ -125,7 +125,7 @@ typedef union {
         uint8_t bsync_opt          : 1; // 7    not used
     } bits;
     uint8_t octet;
-} FSKRegOokPeak_t; // DEMOD1 0x14
+} RegOokPeak_t; // DEMOD1 0x14
 
 typedef union {
     struct {    // sx1272 register 0x1f
@@ -134,7 +134,7 @@ typedef union {
         uint8_t PreambleDetectorOn    : 1;  // 7
     } bits;
     uint8_t octet;
-} FSKRegPreambleDetect_t;
+} RegPreambleDetect_t;
 
 typedef union {
     struct {    // sx1232 register 0x27
@@ -145,7 +145,7 @@ typedef union {
         uint8_t AutoRestartRxMode   : 2;    // 6,7  00b=do not restart 10b=wait-for-pll
     } bits;
     uint8_t octet;
-} FSKRegSyncConfig_t;
+} RegSyncConfig_t;
 
 typedef union {
     struct {    // sx1232 register 0x30
@@ -157,7 +157,7 @@ typedef union {
         uint8_t PacketFormatVariable : 1;   // 7       1=variable length, 0=fixed
     } bits;
     uint8_t octet;
-} FSKRegPktConfig1_t;
+} RegPktConfig1_t;
 
 typedef union {
     struct {    // sx1272 register 0x31 and 0x32
@@ -169,7 +169,7 @@ typedef union {
         uint16_t unused             : 1;    // 15 
     } bits;
     uint16_t word;
-} FSKRegPktConfig2_t;
+} RegPktConfig2_t;
 
 typedef union {
     struct {    // sx1272 register 0x35
@@ -178,7 +178,7 @@ typedef union {
         uint8_t TxStartCondition    : 1;    // 7        0=fifoThresh 1=fifoNotEmpty
     } bits;
     uint8_t octet;
-} FSKRegFifoThreshold_t;
+} RegFifoThreshold_t;
 
 typedef union {
     struct {    // sx1272 register 0x36
@@ -191,7 +191,7 @@ typedef union {
         uint8_t SequencerStart    : 1;  // 7
     } bits;
     uint8_t octet;
-} FSKRegSeqConfig1_t;   // @0x36
+} RegSeqConfig1_t;   // @0x36
 
 typedef union {
     struct {    // sx1272 register 0x37
@@ -211,7 +211,7 @@ typedef union {
         uint8_t unused       : 2;   // 6,7
     } bits;
     uint8_t octet;
-} FSKRegTimerResol_t;   // HL42 @0x38
+} RegTimerResol_t;   // HL42 @0x38
 
 typedef union {
     struct {    // sx1272 register 0x3b
@@ -224,7 +224,7 @@ typedef union {
         uint8_t AutoImageCalOn  : 1;    // 7
     } bits;
     uint8_t octet;
-} FSKRegImageCal_t;   // 
+} RegImageCal_t;   // 
 
 typedef union {
     struct {    // sx1232 register 0x3e
@@ -238,7 +238,7 @@ typedef union {
         uint8_t ModeReady          : 1; // 7 
     } bits;
     uint8_t octet;
-} FSKRegIrqFlags1_t;   // STAT0
+} RegIrqFlags1_t;   // STAT0
 
 typedef union {
     struct {    // sx1232 register 0x3f
@@ -252,17 +252,18 @@ typedef union {
         uint8_t FifoFull        : 1;    // 7 
     } bits;
     uint8_t octet;
-} FSKRegIrqFlags2_t;   // STAT1 @0x3f
+} RegIrqFlags2_t;   // STAT1 @0x3f
 
 //class SX127x_fsk : public SX127x
 class SX127x_fsk {
     public:
         //SX127x_fsk(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName rst, PinName dio_0, PinName dio_1, PinName fem_ctx, PinName fem_cps);
-        SX127x_fsk(SX127x r);
+        SX127x_fsk(SX127x& r);
         
         ~SX127x_fsk();
         
-        /** changes from LoRa mode to FSK mdoe */
+        /** switches from LoRa mode to FSK mdoe
+         * before SX127x_fsk can be used, eanble() must be called.  LoRa mode is unavailable while FSK is in use. */
         void enable(void);
         
         /** fills radio FIFO with payload contents, prior to transmission
@@ -274,6 +275,8 @@ class SX127x_fsk {
         void start_tx(uint16_t len);
         
         void start_rx(void);
+        uint8_t rx_buf_length;
+        void config_dio0_for_pktmode_rx(void);
         
         uint32_t get_rx_bw_hz(uint8_t addr);
         
@@ -282,25 +285,28 @@ class SX127x_fsk {
         
         service_action_e service(void); // (SLIH) ISR bottom half 
         
-        FSKRegRxConfig_t        RegRxConfig;         // 0x0d
-        FSKRegRssiConfig_t      RegRssiConfig;       // 0x0e
-        uint8_t                 RegRssiThresh;       // 0x10
-        FSKRegRxBw_t            RegRxBw;             // 0x12
-        FSKRegRxBw_t            RegAfcBw;            // 0x13
-        FSKRegOokPeak_t         RegOokPeak;          // 0x14
-        FSKRegAfcFei_t          RegAfcFei;           // 0x1a
-        FSKRegPreambleDetect_t  RegPreambleDetect;   // 0x1f
-        FSKRegSyncConfig_t      RegSyncConfig;       // 0x27
-        FSKRegPktConfig1_t      RegPktConfig1;       // 0x30
-        FSKRegPktConfig2_t      RegPktConfig2;       // 0x31 -> 0x32
-        FSKRegFifoThreshold_t   RegFifoThreshold;    // 0x35
-        FSKRegSeqConfig1_t      RegSeqConfig1;       // 0x36
-        RegSeqConfig2_t         RegSeqConfig2;       // 0x37
-        FSKRegTimerResol_t      RegTimerResol;       // 0x38
-        FSKRegImageCal_t        RegImageCal;         // 0x3b
+        RegRxConfig_t        RegRxConfig;         // 0x0d
+        RegRssiConfig_t      RegRssiConfig;       // 0x0e
+        uint8_t              RegRssiThresh;       // 0x10
+        RegRxBw_t            RegRxBw;             // 0x12
+        RegRxBw_t            RegAfcBw;            // 0x13
+        RegOokPeak_t         RegOokPeak;          // 0x14
+        RegAfcFei_t          RegAfcFei;           // 0x1a
+        int16_t              RegAfcValue;         // 0x1c
+        RegPreambleDetect_t  RegPreambleDetect;   // 0x1f
+        RegSyncConfig_t      RegSyncConfig;       // 0x27
+        RegPktConfig1_t      RegPktConfig1;       // 0x30
+        RegPktConfig2_t      RegPktConfig2;       // 0x31 -> 0x32
+        RegFifoThreshold_t   RegFifoThreshold;    // 0x35
+        RegSeqConfig1_t      RegSeqConfig1;       // 0x36
+        RegSeqConfig2_t      RegSeqConfig2;       // 0x37
+        RegTimerResol_t      RegTimerResol;       // 0x38
+        RegImageCal_t        RegImageCal;         // 0x3b
+        
         
     private:
         uint32_t ComputeRxBw( uint8_t mantisse, uint8_t exponent );
         void ComputeRxBwMantExp( uint32_t rxBwValue, uint8_t* mantisse, uint8_t* exponent );
-        SX127x m_xcvr;                  
+        SX127x& m_xcvr;
+                   
 };
