@@ -319,7 +319,7 @@ void SX127x_lora::start_tx(uint8_t len)
         
     // radio doesnt provide FhssChangeChannel with channel=0 for TX    
     if (RegHopPeriod > 0)
-        m_xcvr.write_reg_u24(REG_FRFMSB, m_xcvr.frfs[0]);
+        m_xcvr.write_u24(REG_FRFMSB, m_xcvr.frfs[0]);
         
     m_xcvr.set_opmode(RF_OPMODE_TRANSMITTER);
 }
@@ -343,7 +343,7 @@ void SX127x_lora::start_rx()
     
     // shouldn't be necessary, radio should provide FhssChangeChannel with channel=0 for RX  
     if (RegHopPeriod > 0)
-        m_xcvr.write_reg_u24(REG_FRFMSB, m_xcvr.frfs[0]);
+        m_xcvr.write_u24(REG_FRFMSB, m_xcvr.frfs[0]);
     
     m_xcvr.set_opmode(RF_OPMODE_RECEIVER);
 }
@@ -375,7 +375,7 @@ service_action_e SX127x_lora::service()
     if (m_xcvr.RegDioMapping1.bits.Dio1Mapping == 1) {
         if (m_xcvr.dio1) {
             RegHopChannel.octet = m_xcvr.read_reg(REG_LR_HOPCHANNEL);    
-            m_xcvr.write_reg_u24(REG_FRFMSB, m_xcvr.frfs[RegHopChannel.bits.FhssPresentChannel]);
+            m_xcvr.write_u24(REG_FRFMSB, m_xcvr.frfs[RegHopChannel.bits.FhssPresentChannel]);
             printf("hopch:%d\r\n", RegHopChannel.bits.FhssPresentChannel);
             RegIrqFlags.octet = 0;
             RegIrqFlags.bits.FhssChangeChannel = 1;
@@ -393,7 +393,7 @@ service_action_e SX127x_lora::service()
             RegIrqFlags.octet = m_xcvr.read_reg(REG_LR_IRQFLAGS);  // save flags
             RegHopChannel.octet = m_xcvr.read_reg(REG_LR_HOPCHANNEL);
             if (RegIrqFlags.bits.FhssChangeChannel) {
-                m_xcvr.write_reg_u24(REG_FRFMSB, m_xcvr.frfs[RegHopChannel.bits.FhssPresentChannel]);
+                m_xcvr.write_u24(REG_FRFMSB, m_xcvr.frfs[RegHopChannel.bits.FhssPresentChannel]);
             }
             //printf("[%02x]", RegIrqFlags.octet);
             m_xcvr.write_reg(REG_LR_IRQFLAGS, RegIrqFlags.octet); // clear flags in radio

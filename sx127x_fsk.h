@@ -266,6 +266,9 @@ class SX127x_fsk {
          * before SX127x_fsk can be used, eanble() must be called.  LoRa mode is unavailable while FSK is in use. */
         void enable(void);
         
+        /** put FSK modem to some functioning default */
+        void init(void);
+        
         /** fills radio FIFO with payload contents, prior to transmission
          * @param len count of bytes to put into FIFO
          * @note tx_buf[] should contain desired payload (to send) prior to calling
@@ -282,6 +285,12 @@ class SX127x_fsk {
         
         /** bw_hz: single side (ssb) */
         void set_rx_dcc_bw_hz(uint32_t bw_hz, char afc);
+        
+        uint32_t get_bitrate(void);
+        void set_bitrate(uint32_t);
+
+        uint32_t get_tx_fdev_hz(void);
+        void set_tx_fdev_hz(uint32_t);
         
         service_action_e service(void); // (SLIH) ISR bottom half 
         

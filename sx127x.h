@@ -220,7 +220,8 @@ class SX127x {
          * @param data byte to write
          */
         void write_reg(uint8_t addr, uint8_t data);
-        void write_reg_u24(uint8_t addr, uint32_t data);
+        void write_u16(uint8_t addr, uint16_t data);
+        void write_u24(uint8_t addr, uint32_t data);
         
         /** write register(s) to radio, to an arbitrary amount of registers following first
          * @param addr register address

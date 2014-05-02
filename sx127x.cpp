@@ -42,22 +42,20 @@ void SX127x::init()
     RegDioMapping1.octet = read_reg(REG_DIOMAPPING1);
     RegDioMapping2.octet = read_reg(REG_DIOMAPPING2);
     
-    if (!RegOpMode.bits.LongRangeMode) {
+/*    if (!RegOpMode.bits.LongRangeMode) {
         if (RegOpMode.bits.Mode != RF_OPMODE_SLEEP)
             set_opmode(RF_OPMODE_SLEEP);
         RegOpMode.bits.LongRangeMode = 1;
         write_reg(REG_OPMODE, RegOpMode.octet);
-    }
-    
-
+    }*/
     
     get_type();
     
-    // turn on PA BOOST, eval boards are wired for this connection
-    RegPaConfig.bits.PaSelect = 1;
-    write_reg(REG_PACONFIG, RegPaConfig.octet);
-    
-
+    if (type == SX1272) {
+        // turn on PA BOOST, eval boards are wired for this connection
+        RegPaConfig.bits.PaSelect = 1;
+        write_reg(REG_PACONFIG, RegPaConfig.octet);
+    }
 }
 
 void SX127x::get_type()
@@ -148,7 +146,18 @@ uint16_t SX127x::read_u16(uint8_t addr)
     return ret;
 }
 
-void SX127x::write_reg_u24(uint8_t addr, uint32_t data)
+void SX127x::write_u16(uint8_t addr, uint16_t data)
+{
+    m_cs = 0;   // Select the device by seting chip select low
+
+    m_spi.write(addr | 0x80); // bit7 is high for writing to radio
+    m_spi.write((data >> 8) & 0xff);
+    m_spi.write(data & 0xff);
+ 
+    m_cs = 1;   // Deselect the device
+}
+
+void SX127x::write_u24(uint8_t addr, uint32_t data)
 {
     m_cs = 0;   // Select the device by seting chip select low
 
@@ -203,7 +212,7 @@ void SX127x::set_frf_MHz( float MHz )
     uint32_t frf;
     
     frf = MHz / FREQ_STEP_MHZ;
-    write_reg_u24(REG_FRFMSB, frf);
+    write_u24(REG_FRFMSB, frf);
     
     if (MHz < 525)
         HF = false;

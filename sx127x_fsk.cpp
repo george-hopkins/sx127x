@@ -75,6 +75,62 @@ void SX127x_fsk::enable()
     m_xcvr.set_opmode(RF_OPMODE_STANDBY);     
 }
 
+void SX127x_fsk::init()
+{
+    m_xcvr.set_opmode(RF_OPMODE_STANDBY);
+    
+    RegRxConfig.bits.RxTrigger = 6; // have RX restart (trigger) on preamble detection
+    RegRxConfig.bits.AfcAutoOn = 1; // have AFC performed on RX restart (RX trigger)
+    m_xcvr.write_reg(REG_FSK_RXCONFIG, RegRxConfig.octet);
+    
+    RegPreambleDetect.bits.PreambleDetectorOn = 1;  // enable preamble detector
+    m_xcvr.write_reg(REG_FSK_PREAMBLEDETECT, RegPreambleDetect.octet);
+    
+    m_xcvr.write_reg(REG_FSK_SYNCVALUE1, 0x55);
+    m_xcvr.write_reg(REG_FSK_SYNCVALUE2, 0x6f); 
+    m_xcvr.write_reg(REG_FSK_SYNCVALUE3, 0x4e);
+    RegSyncConfig.bits.SyncSize = 2;
+    m_xcvr.write_reg(REG_FSK_SYNCCONFIG, RegSyncConfig.octet);
+    
+    // in case these were changed from default:
+    set_bitrate(4800);
+    set_tx_fdev_hz(5050);
+    set_rx_dcc_bw_hz(10500, 0);    // rxbw
+    set_rx_dcc_bw_hz(50000, 1);    // afcbw
+}
+    
+uint32_t SX127x_fsk::get_bitrate()
+{
+    uint16_t br = m_xcvr.read_u16(REG_FSK_BITRATEMSB);
+
+    if (br == 0)
+        return 0;
+    else
+        return XTAL_FREQ / br;
+}
+
+void SX127x_fsk::set_bitrate(uint32_t bps)
+{
+    uint16_t tmpBitrate = XTAL_FREQ / bps;
+    //printf("tmpBitrate:%d = %d / %d\r\n", tmpBitrate, XTAL_FREQ, bps);
+    m_xcvr.write_u16(REG_FSK_BITRATEMSB, tmpBitrate);
+}
+
+void SX127x_fsk::set_tx_fdev_hz(uint32_t hz)
+{
+    float tmpFdev = hz / FREQ_STEP_HZ;
+    uint16_t v;
+    //printf("tmpFdev:%f = %d / %f\r\n", tmpFdev, hz, FREQ_STEP_HZ);
+    v = (uint16_t)tmpFdev;
+    m_xcvr.write_u16(REG_FSK_FDEVMSB, v);
+}
+    
+uint32_t SX127x_fsk::get_tx_fdev_hz(void)
+{
+    uint16_t fdev = m_xcvr.read_u16(REG_FSK_FDEVMSB);
+    return fdev * FREQ_STEP_HZ;
+}
+
 uint32_t SX127x_fsk::ComputeRxBw( uint8_t mantisse, uint8_t exponent )
 {
     // rxBw
