@@ -264,8 +264,8 @@ class SX127x {
         // frequency hopping table
         const uint32_t *frfs;
         
-        InterruptIn dio0;
-        InterruptIn dio1;
+        DigitalIn dio0;
+        DigitalIn dio1;
         DigitalOut femcps;  // LF rf switch
         DigitalOut femctx;  // HF rf switch
         DigitalOut m_cs;
