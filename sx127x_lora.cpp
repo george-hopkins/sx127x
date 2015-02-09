@@ -277,29 +277,7 @@ void SX127x_lora::setAgcAutoOn(bool on)
 
 
 void SX127x_lora::start_tx(uint8_t len)
-{
-    if (m_xcvr.type == SX1276) {
-        // PA_BOOST on LF, RFO on HF
-        if (m_xcvr.HF) {
-            if (m_xcvr.RegPaConfig.bits.PaSelect) {
-                m_xcvr.RegPaConfig.bits.PaSelect = 0;
-                m_xcvr.write_reg(REG_PACONFIG, m_xcvr.RegPaConfig.octet);
-            }                
-        } else { // LF...
-            if (!m_xcvr.RegPaConfig.bits.PaSelect) {
-                m_xcvr.RegPaConfig.bits.PaSelect = 1;
-                m_xcvr.write_reg(REG_PACONFIG, m_xcvr.RegPaConfig.octet);
-            }        
-        }
-    } else if (m_xcvr.type == SX1272) {
-        // always PA_BOOST
-        if (!m_xcvr.RegPaConfig.bits.PaSelect) {
-            m_xcvr.RegPaConfig.bits.PaSelect = 1;
-            m_xcvr.write_reg(REG_PACONFIG, m_xcvr.RegPaConfig.octet);
-        }
-    }
-                    
-                    
+{                   
     // DIO0 to TxDone
     if (m_xcvr.RegDioMapping1.bits.Dio0Mapping != 1) {
         m_xcvr.RegDioMapping1.bits.Dio0Mapping = 1;
@@ -311,16 +289,7 @@ void SX127x_lora::start_tx(uint8_t len)
     
     // write PayloadLength bytes to fifo
     write_fifo(len);
-
-    if (m_xcvr.HF)
-        m_xcvr.femctx = 1;
-    else
-        m_xcvr.femcps = 0;
-        
-    // radio doesnt provide FhssChangeChannel with channel=0 for TX    
-    if (RegHopPeriod > 0)
-        m_xcvr.write_u24(REG_FRFMSB, m_xcvr.frfs[0]);
-        
+       
     m_xcvr.set_opmode(RF_OPMODE_TRANSMITTER);
 }
 
@@ -329,22 +298,13 @@ void SX127x_lora::start_rx()
     if (!m_xcvr.RegOpMode.bits.LongRangeMode)
         return;
 
-    if (m_xcvr.HF)
-        m_xcvr.femctx = 0;
-    else
-        m_xcvr.femcps = 1;
-        
     if (m_xcvr.RegDioMapping1.bits.Dio0Mapping != 0) {
         m_xcvr.RegDioMapping1.bits.Dio0Mapping = 0;    // DIO0 to RxDone
         m_xcvr.write_reg(REG_DIOMAPPING1, m_xcvr.RegDioMapping1.octet);
     }
     
     m_xcvr.write_reg(REG_LR_FIFOADDRPTR, m_xcvr.read_reg(REG_LR_FIFORXBASEADDR));
-    
-    // shouldn't be necessary, radio should provide FhssChangeChannel with channel=0 for RX  
-    if (RegHopPeriod > 0)
-        m_xcvr.write_u24(REG_FRFMSB, m_xcvr.frfs[0]);
-    
+      
     m_xcvr.set_opmode(RF_OPMODE_RECEIVER);
 }
 
@@ -370,20 +330,7 @@ service_action_e SX127x_lora::service()
             }
         }
     }
-    
-    // FhssChangeChannel
-    if (m_xcvr.RegDioMapping1.bits.Dio1Mapping == 1) {
-        if (m_xcvr.dio1) {
-            RegHopChannel.octet = m_xcvr.read_reg(REG_LR_HOPCHANNEL);    
-            m_xcvr.write_u24(REG_FRFMSB, m_xcvr.frfs[RegHopChannel.bits.FhssPresentChannel]);
-            printf("hopch:%d\r\n", RegHopChannel.bits.FhssPresentChannel);
-            RegIrqFlags.octet = 0;
-            RegIrqFlags.bits.FhssChangeChannel = 1;
-           m_xcvr. write_reg(REG_LR_IRQFLAGS, RegIrqFlags.octet);
-            
-        }
-    }
-    
+       
     if (m_xcvr.dio0 == 0)
         return SERVICE_NONE;
         
@@ -392,9 +339,6 @@ service_action_e SX127x_lora::service()
             /* user checks for CRC error in IrqFlags */
             RegIrqFlags.octet = m_xcvr.read_reg(REG_LR_IRQFLAGS);  // save flags
             RegHopChannel.octet = m_xcvr.read_reg(REG_LR_HOPCHANNEL);
-            if (RegIrqFlags.bits.FhssChangeChannel) {
-                m_xcvr.write_u24(REG_FRFMSB, m_xcvr.frfs[RegHopChannel.bits.FhssPresentChannel]);
-            }
             //printf("[%02x]", RegIrqFlags.octet);
             m_xcvr.write_reg(REG_LR_IRQFLAGS, RegIrqFlags.octet); // clear flags in radio
             
@@ -408,11 +352,6 @@ service_action_e SX127x_lora::service()
             read_fifo(RegRxNbBytes);
             return SERVICE_READ_FIFO;
         case 1: // TxDone
-            if (m_xcvr.HF)
-                m_xcvr.femctx = 0;
-            else
-                m_xcvr.femcps = 1;
-
             RegIrqFlags.octet = 0;
             RegIrqFlags.bits.TxDone = 1;
             m_xcvr.write_reg(REG_LR_IRQFLAGS, RegIrqFlags.octet);                  

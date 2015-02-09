@@ -50,6 +50,9 @@
 #define REG_DIOMAPPING2                             0x41
 #define REG_VERSION                                 0x42
 
+#define REG_PDSTRIM1                                0x5a
+#define REG_PLL                                     0x5C    // RX PLL bandwidth
+#define REG_BSYNCTST2                               0x67
 /******************************************************************************/
 
 
@@ -158,6 +161,34 @@ typedef union {
 
 /***************************************************/
 
+typedef union {
+    struct {    // sx1272 register 0x5a
+        uint8_t prog_txdac             : 3;    // 0,1,2     BGR ref current to PA DAC
+        uint8_t pds_analog_test        : 1;    // 3      
+        uint8_t pds_pa_test            : 2;    // 4,5
+        uint8_t pds_ptat               : 2;    // 6,7     leave at 2 (5uA)
+    } bits;
+    uint8_t octet;
+} RegPdsTrim1_t;
+
+typedef union {
+    struct {    // sx1272 register 0x5c
+        uint8_t reserved           : 6;    // 0->5
+        uint8_t PllBandwidth       : 2;    // 6,7 
+    } bits;
+    uint8_t octet;
+} RegPll_t;
+
+typedef union {
+    struct {    // sx1272 register 0x67
+        uint8_t bsync_mode              : 3;    // 0,1,2
+        uint8_t reserved                : 1;    // 3
+        uint8_t bsync_thresh_validity   : 1;    // 4
+        uint8_t unused                  : 3;    // 5,6,7 
+    } bits;
+    uint8_t octet;
+} RegBsyncTest2_t;
+
 /** FSK/LoRa radio transceiver.
  * see http://en.wikipedia.org/wiki/Chirp_spread_spectrum
  */
@@ -175,7 +206,7 @@ class SX127x {
          * @param fem_cps rx-tx switch for LF bands (vhf/433)
          */
          
-        SX127x(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName rst, PinName dio_0, PinName dio_1, PinName fem_ctx, PinName fem_cps);
+        SX127x(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName rst, PinName dio_0, PinName dio_1);
         
         ~SX127x();
         
@@ -260,25 +291,26 @@ class SX127x {
         
         //! pin assignments
         RegDioMapping2_t RegDioMapping2;
-        
-        // frequency hopping table
-        const uint32_t *frfs;
-        
+               
         DigitalIn dio0;
         DigitalIn dio1;
-        DigitalOut femcps;  // LF rf switch
-        DigitalOut femctx;  // HF rf switch
         DigitalOut m_cs;
         SPI m_spi;
         bool HF;    // sx1272 is always HF   
-        
+
+        /*! board-specific RF switch callback, called whenever operating mode is changed
+         * This function should also set RegPaConfig.bits.PaSelect to use PA_BOOST or RFO during TX.
+         * examples:
+         *      PE4259-63: controlled directly by radio chip, no software function needed
+         *      SKY13350-385LF: two separate control lines, requires two DigitalOut pins
+         */
+        FunctionPointer rf_switch;
+         
     private:    
-        DigitalInOut reset_pin;
-        //void dio0_callback(void);
-        
+        DigitalInOut reset_pin;        
         
     protected:
-        FunctionPointer _callback_rx;
+        //FunctionPointer _callback_rx;
         
 };
 

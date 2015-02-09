@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-SX127x::SX127x(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName rst, PinName dio_0, PinName dio_1, PinName fem_ctx, PinName fem_cps) :
-                m_spi(mosi, miso, sclk),                  m_cs(cs), reset_pin(rst), dio0(dio_0), dio1(dio_1), femctx(fem_ctx), femcps(fem_cps)
+SX127x::SX127x(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName rst, PinName dio_0, PinName dio_1) :
+                m_spi(mosi, miso, sclk),                  m_cs(cs), reset_pin(rst), dio0(dio_0), dio1(dio_1)
 {
     reset_pin.input();
     m_cs = 1;
@@ -204,6 +204,10 @@ void SX127x::WriteBuffer( uint8_t addr, uint8_t *buffer, uint8_t size )
 void SX127x::set_opmode(chip_mode_e mode)
 {
     RegOpMode.bits.Mode = mode;
+    
+    // callback to control antenna switch and PaSelect (PABOOST/RFO) for TX
+    rf_switch.call();
+    
     write_reg(REG_OPMODE, RegOpMode.octet);
 }
 
