@@ -216,7 +216,7 @@ void SX127x_lora::setSf(uint8_t sf)
             RegModemConfig.sx1272bits.LowDataRateOptimize = 0;
         m_xcvr.write_reg(REG_LR_MODEMCONFIG, RegModemConfig.octet);
     } else if (m_xcvr.type == SX1276) {
-        if (sf > 10 && RegModemConfig.sx1272bits.Bw == 0)   // if bw=125KHz and sf11 or sf12
+        if (sf > 10 && RegModemConfig.sx1276bits.Bw == 0)   // if bw=125KHz and sf11 or sf12
             RegModemConfig3.sx1276bits.LowDataRateOptimize = 1;
         else
             RegModemConfig3.sx1276bits.LowDataRateOptimize = 0;

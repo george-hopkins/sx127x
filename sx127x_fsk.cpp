@@ -252,7 +252,7 @@ void SX127x_fsk::start_tx(uint16_t arg_len)
                 printf("var-oversized %d R=%d\r\n", pkt_buf_len, remaining_);*/
                 printf("var-oversized %d\r\n", pkt_buf_len);
             } else {
-                //setup_FifoLevel(NO_EDGE); // disable
+                //setup_FifoLevel(NO_EDGE); // disable 
                 write_fifo(pkt_buf_len);
                 //remaining_ = 0; // all was sent
             }
