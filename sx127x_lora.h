@@ -210,7 +210,8 @@ class SX127x_lora {
         RegModemConfig3_t   RegModemConfig3;        // 0x26
         RegTest31_t         RegTest31;              // 0x31
         
-    private:
         SX127x& m_xcvr;
+        
+    private:
         void set_nb_trig_peaks(int);                                                         
 };

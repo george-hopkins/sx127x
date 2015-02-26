@@ -312,10 +312,10 @@ class SX127x_fsk {
         RegTimerResol_t      RegTimerResol;       // 0x38
         RegImageCal_t        RegImageCal;         // 0x3b
         
+        SX127x& m_xcvr;
         
     private:
         uint32_t ComputeRxBw( uint8_t mantisse, uint8_t exponent );
-        void ComputeRxBwMantExp( uint32_t rxBwValue, uint8_t* mantisse, uint8_t* exponent );
-        SX127x& m_xcvr;
+        void ComputeRxBwMantExp( uint32_t rxBwValue, uint8_t* mantisse, uint8_t* exponent );     
                    
 };

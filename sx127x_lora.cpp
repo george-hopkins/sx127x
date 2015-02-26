@@ -274,8 +274,6 @@ void SX127x_lora::setAgcAutoOn(bool on)
     
 }
 
-
-
 void SX127x_lora::start_tx(uint8_t len)
 {                   
     // DIO0 to TxDone
