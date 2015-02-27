@@ -147,17 +147,50 @@ uint8_t SX127x_lora::getBw(void)
     else
         return 0;
 }
+float SX127x_lora::get_symbol_period()
+{
+    float khz = 0;
+    
+    if (m_xcvr.type == SX1276) {
+        switch (RegModemConfig.sx1276bits.Bw) {
+            case 0: khz = 7.8; break;
+            case 1: khz = 10.4; break;
+            case 2: khz = 15.6; break;
+            case 3: khz = 20.8; break;
+            case 4: khz = 31.25; break;
+            case 5: khz = 41.7; break;
+            case 6: khz = 62.5; break;
+            case 7: khz = 125; break;
+            case 8: khz = 250; break;
+            case 9: khz = 500; break;
+        }
+    } else if (m_xcvr.type == SX1272) {
+        switch (RegModemConfig.sx1272bits.Bw) {
+            case 0: khz = 125; break;
+            case 1: khz = 250; break;
+            case 2: khz = 500; break;            
+        }
+    }
+    
+    // return symbol duration in milliseconds
+    return (1 << RegModemConfig2.sx1276bits.SpreadingFactor) / khz; 
+}
 
 void SX127x_lora::setBw(uint8_t bw)
 {
     if (!m_xcvr.RegOpMode.bits.LongRangeMode)
         return;
         
-    if (m_xcvr.type == SX1276)
+    if (m_xcvr.type == SX1276) {
         RegModemConfig.sx1276bits.Bw = bw;
-    else if (m_xcvr.type == SX1272) {
+        if (get_symbol_period() > 16)
+            RegModemConfig3.sx1276bits.LowDataRateOptimize = 1;
+        else
+            RegModemConfig3.sx1276bits.LowDataRateOptimize = 0;
+        m_xcvr.write_reg(REG_LR_MODEMCONFIG3, RegModemConfig3.octet);            
+    } else if (m_xcvr.type == SX1272) {
         RegModemConfig.sx1272bits.Bw = bw;
-        if (RegModemConfig2.sx1272bits.SpreadingFactor > 10)
+        if (get_symbol_period() > 16)
             RegModemConfig.sx1272bits.LowDataRateOptimize = 1;
         else
             RegModemConfig.sx1272bits.LowDataRateOptimize = 0;
@@ -210,13 +243,13 @@ void SX127x_lora::setSf(uint8_t sf)
     m_xcvr.write_reg(REG_LR_MODEMCONFIG2, RegModemConfig2.octet);
     
     if (m_xcvr.type == SX1272) {
-        if (sf > 10 && RegModemConfig.sx1272bits.Bw == 0)   // if bw=125KHz and sf11 or sf12
+        if (get_symbol_period() > 16)
             RegModemConfig.sx1272bits.LowDataRateOptimize = 1;
         else
             RegModemConfig.sx1272bits.LowDataRateOptimize = 0;
         m_xcvr.write_reg(REG_LR_MODEMCONFIG, RegModemConfig.octet);
     } else if (m_xcvr.type == SX1276) {
-        if (sf > 10 && RegModemConfig.sx1276bits.Bw == 0)   // if bw=125KHz and sf11 or sf12
+        if (get_symbol_period() > 16)
             RegModemConfig3.sx1276bits.LowDataRateOptimize = 1;
         else
             RegModemConfig3.sx1276bits.LowDataRateOptimize = 0;

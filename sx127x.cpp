@@ -42,13 +42,6 @@ void SX127x::init()
     RegDioMapping1.octet = read_reg(REG_DIOMAPPING1);
     RegDioMapping2.octet = read_reg(REG_DIOMAPPING2);
     
-/*    if (!RegOpMode.bits.LongRangeMode) {
-        if (RegOpMode.bits.Mode != RF_OPMODE_SLEEP)
-            set_opmode(RF_OPMODE_SLEEP);
-        RegOpMode.bits.LongRangeMode = 1;
-        write_reg(REG_OPMODE, RegOpMode.octet);
-    }*/
-    
     get_type();
     
     if (type == SX1272) {
@@ -61,6 +54,17 @@ void SX127x::init()
 void SX127x::get_type()
 {
     RegOpMode.octet = read_reg(REG_OPMODE);
+    
+    /* SX1272 starts in FSK mode on powerup, RegOpMode bit3 will be set for BT1.0 in FSK */
+    if (!RegOpMode.bits.LongRangeMode) {
+        set_opmode(RF_OPMODE_SLEEP);
+        wait(0.01);
+        RegOpMode.bits.LongRangeMode = 1;
+        write_reg(REG_OPMODE, RegOpMode.octet);
+        wait(0.01);
+        RegOpMode.octet = read_reg(REG_OPMODE);     
+    }
+
     if (RegOpMode.sx1276LORAbits.LowFrequencyModeOn)
         type = SX1276;
     else {

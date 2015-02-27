@@ -113,7 +113,7 @@ typedef union {
     struct {    // sx127x register 0x26
         uint8_t reserved    : 2;    // 0,1
         uint8_t AgcAutoOn   : 1;    // 2
-        uint8_t LowDataRateOptimize  : 1;    // 3   ppm_offset
+        uint8_t LowDataRateOptimize  : 1;    // 3   ppm_offset, use when symbol duration exceeds 16ms
         uint8_t unused      : 4;    // 4,5,6,7 
     } sx1276bits;
     uint8_t octet;
@@ -190,6 +190,11 @@ class SX127x_lora {
         void setAgcAutoOn(bool);
         
         float get_pkt_rssi(void);
+        
+        /** retrieve symbol duration from bandwidth and spreading factor
+         * @returns symbol duration in milliseconds
+         */        
+        float get_symbol_period(void);
         
         service_action_e service(void); // (SLIH) ISR bottom half 
         
