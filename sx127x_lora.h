@@ -40,7 +40,10 @@
 #define REG_LR_TEST31                               0x31    // if_freq_auto, ...
 #define REG_LR_TEST32                               0x32    // 
 #define REG_LR_TEST33                               0x33
+#define REG_LR_CAD_PEAK_TO_NOISE_RATIO              0x34
+#define REG_LR_CAD_MIN_PEAK                         0x35
 #define REG_LR_DETECTION_THRESHOLD                  0x37
+#define REG_LR_SYNC_BYTE                            0x39    // default 0x12 (value of 0x21 will isolate network)
 
 typedef union {
     struct {    // sx127x register 0x12
