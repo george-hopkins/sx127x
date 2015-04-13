@@ -219,7 +219,7 @@ class SX127x_lora {
         RegTest31_t         RegTest31;              // 0x31
         
         SX127x& m_xcvr;
-        
+
     private:
         void set_nb_trig_peaks(int);                                                         
 };

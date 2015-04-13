@@ -263,8 +263,9 @@ class SX127x_fsk {
         ~SX127x_fsk();
         
         /** switches from LoRa mode to FSK mdoe
-         * before SX127x_fsk can be used, eanble() must be called.  LoRa mode is unavailable while FSK is in use. */
-        void enable(void);
+         * before SX127x_fsk can be used, eanble() must be called.  LoRa mode is unavailable while FSK is in use.
+         * @param fast true=bypass reading FSK registers after mode switch */
+        void enable(bool fast);
         
         /** put FSK modem to some functioning default */
         void init(void);

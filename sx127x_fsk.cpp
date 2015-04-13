@@ -41,17 +41,18 @@ void SX127x_fsk::write_fifo(uint8_t len)
     m_xcvr.m_cs = 1;
 }
 
-void SX127x_fsk::enable()
+void SX127x_fsk::enable(bool fast)
 {
     m_xcvr.set_opmode(RF_OPMODE_SLEEP);
     
     m_xcvr.RegOpMode.bits.LongRangeMode = 0;
     m_xcvr.write_reg(REG_OPMODE, m_xcvr.RegOpMode.octet);
-    wait(0.01);
+    if (fast)
+        return;
     
     RegPktConfig1.octet = m_xcvr.read_reg(REG_FSK_PACKETCONFIG1);
     RegPktConfig2.word = m_xcvr.read_u16(REG_FSK_PACKETCONFIG2);
-    RegRxConfig.octet = m_xcvr.read_u16(REG_FSK_RXCONFIG);
+    RegRxConfig.octet = m_xcvr.read_reg(REG_FSK_RXCONFIG);
     RegPreambleDetect.octet = m_xcvr.read_reg(REG_FSK_PREAMBLEDETECT);
     RegSyncConfig.octet = m_xcvr.read_reg(REG_FSK_SYNCCONFIG);
     RegFifoThreshold.octet = m_xcvr.read_reg(REG_FSK_FIFOTHRESH);

@@ -326,8 +326,11 @@ void SX127x_lora::start_tx(uint8_t len)
 
 void SX127x_lora::start_rx()
 {
+    m_xcvr.RegOpMode.octet = m_xcvr.read_reg(REG_OPMODE);
     if (!m_xcvr.RegOpMode.bits.LongRangeMode)
-        return;
+        return; // fsk mode
+    if (m_xcvr.RegOpMode.sx1276LORAbits.AccessSharedReg)
+        return; // fsk page
 
     if (m_xcvr.RegDioMapping1.bits.Dio0Mapping != 0) {
         m_xcvr.RegDioMapping1.bits.Dio0Mapping = 0;    // DIO0 to RxDone
@@ -391,3 +394,4 @@ service_action_e SX127x_lora::service()
     
     return SERVICE_ERROR;    
 }
+
