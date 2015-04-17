@@ -203,6 +203,8 @@ class SX127x_lora {
         
         bool poll_vh;
         
+        void set_nb_trig_peaks(int);
+        
         RegIrqFlags_t       RegIrqFlags;            // 0x12
         uint8_t             RegRxNbBytes;           // 0x13
         RegModemStatus_t    RegModemStatus;         // 0x18
@@ -221,5 +223,5 @@ class SX127x_lora {
         SX127x& m_xcvr;
 
     private:
-        void set_nb_trig_peaks(int);                                                         
+                                                                 
 };
