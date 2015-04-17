@@ -210,6 +210,7 @@ uint8_t SX127x_lora::getSf(void)
 
 void SX127x_lora::set_nb_trig_peaks(int n)
 {
+    /* TODO: different requirements for RX_CONTINUOUS vs RX_SINGLE */
     RegTest31.bits.detect_trig_same_peaks_nb = n;
     m_xcvr.write_reg(REG_LR_TEST31, RegTest31.octet);
 }
@@ -326,11 +327,12 @@ void SX127x_lora::start_tx(uint8_t len)
 
 void SX127x_lora::start_rx()
 {
-    m_xcvr.RegOpMode.octet = m_xcvr.read_reg(REG_OPMODE);
     if (!m_xcvr.RegOpMode.bits.LongRangeMode)
         return; // fsk mode
     if (m_xcvr.RegOpMode.sx1276LORAbits.AccessSharedReg)
         return; // fsk page
+        
+    m_xcvr.set_opmode(RF_OPMODE_RECEIVER);
 
     if (m_xcvr.RegDioMapping1.bits.Dio0Mapping != 0) {
         m_xcvr.RegDioMapping1.bits.Dio0Mapping = 0;    // DIO0 to RxDone
@@ -338,8 +340,6 @@ void SX127x_lora::start_rx()
     }
     
     m_xcvr.write_reg(REG_LR_FIFOADDRPTR, m_xcvr.read_reg(REG_LR_FIFORXBASEADDR));
-      
-    m_xcvr.set_opmode(RF_OPMODE_RECEIVER);
 }
 
 float SX127x_lora::get_pkt_rssi()
