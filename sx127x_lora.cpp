@@ -147,6 +147,46 @@ uint8_t SX127x_lora::getBw(void)
     else
         return 0;
 }
+
+int SX127x_lora::get_freq_error_Hz()
+{
+    int freq_error;
+    float f, khz = 0;
+    freq_error = m_xcvr.read_reg(REG_LR_TEST28);
+    freq_error <<= 8;
+    freq_error += m_xcvr.read_reg(REG_LR_TEST29);
+    freq_error <<= 8;
+    freq_error += m_xcvr.read_reg(REG_LR_TEST2A);
+    if (freq_error & 0x80000) {  // 20bit value is negative
+        //signed 20bit to 32bit
+        freq_error |= 0xfff00000;
+    }   
+    f = freq_error / (float)XTAL_FREQ;
+    f *= (float)0x1000000; // 2^24
+    if (m_xcvr.type == SX1272) {
+        switch (RegModemConfig.sx1272bits.Bw) {
+            case 0: khz = 125; break;
+            case 1: khz = 250; break;
+            case 2: khz = 500; break;                
+        }
+    } else if (m_xcvr.type == SX1276) {
+        switch (RegModemConfig.sx1276bits.Bw) {
+            case 0: khz = 7.8; break;
+            case 1: khz = 10.4; break;
+            case 2: khz = 15.6; break;
+            case 3: khz = 20.8; break;
+            case 4: khz = 31.25; break;
+            case 5: khz = 41.7; break;
+            case 6: khz = 62.5; break;
+            case 7: khz = 125; break;
+            case 8: khz = 250; break;
+            case 9: khz = 500; break;            
+        }
+    }
+    f *= khz / 500;
+    return (int)f;
+}
+
 float SX127x_lora::get_symbol_period()
 {
     float khz = 0;

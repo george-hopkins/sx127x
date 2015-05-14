@@ -39,7 +39,7 @@
 #define REG_LR_IFFRQL                               0x30    // if_freq(7:0)
 #define REG_LR_TEST31                               0x31    // if_freq_auto, ...
 #define REG_LR_TEST32                               0x32    // 
-#define REG_LR_TEST33                               0x33
+#define REG_LR_TEST33                               0x33    // invert IQ
 #define REG_LR_CAD_PEAK_TO_NOISE_RATIO              0x34
 #define REG_LR_CAD_MIN_PEAK                         0x35
 #define REG_LR_DETECTION_THRESHOLD                  0x37
@@ -135,6 +135,20 @@ typedef union {
     uint8_t octet;
 } RegTest31_t;
 
+typedef union {
+    struct {    // sx127x register 0x33
+        uint8_t chirp_invert_tx    : 1;    // 0  invert TX spreading sequence
+        uint8_t chirp_invert_rx    : 1;    // 1  invert chip direction in RX mode
+        uint8_t sync_detect_th     : 1;    // 2  require 6dB despread SNR during preamble
+        uint8_t invert_coef_phase  : 1;    // 3  
+        uint8_t invert_coef_amp    : 1;    // 4
+        uint8_t quad_correction_en : 1;    // 5  enable IQ compensation
+        uint8_t invert_i_q         : 1;    // 6  RX invert
+        uint8_t start_rambist      : 1;    // 7
+    } bits;
+    uint8_t octet;
+} RegTest33_t;
+
 //class SX127x_lora : public SX127x
 class SX127x_lora {
     public:
@@ -204,6 +218,12 @@ class SX127x_lora {
         bool poll_vh;
         
         void set_nb_trig_peaks(int);
+        
+        /** get receiver difference in RF frequency 
+          * @returns hertz
+          * @note if receiver is lower in frequency than transmitter, a negative Hz will be returned
+          */
+        int get_freq_error_Hz(void);
         
         RegIrqFlags_t       RegIrqFlags;            // 0x12
         uint8_t             RegRxNbBytes;           // 0x13
