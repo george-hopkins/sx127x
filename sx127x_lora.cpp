@@ -216,6 +216,30 @@ float SX127x_lora::get_symbol_period()
     return (1 << RegModemConfig2.sx1276bits.SpreadingFactor) / khz; 
 }
 
+void SX127x_lora::setBw_KHz(int khz)
+{
+    uint8_t bw = 0;
+    
+    if (m_xcvr.type == SX1276) {
+        if (khz <= 8) bw = 0;
+        else if (khz <= 11) bw = 1;
+        else if (khz <= 16) bw = 2;
+        else if (khz <= 21) bw = 3;
+        else if (khz <= 32) bw = 4;
+        else if (khz <= 42) bw = 5;
+        else if (khz <= 63) bw = 6;
+        else if (khz <= 125) bw = 7;
+        else if (khz <= 250) bw = 8;
+        else if (khz <= 500) bw = 9;
+    } else if (m_xcvr.type == SX1272) {
+        if (khz <= 125) bw = 0;
+        else if (khz <= 250) bw = 1;
+        else if (khz <= 500) bw = 2;
+    }
+    
+    setBw(bw);
+}
+
 void SX127x_lora::setBw(uint8_t bw)
 {
     if (!m_xcvr.RegOpMode.bits.LongRangeMode)

@@ -195,6 +195,11 @@ class SX127x_lora {
         uint8_t getBw(void);
         void setBw(uint8_t bw);
         
+        /** Set bandwidth in KHz *
+         * @param khz lora bandwidth in KHz
+         */        
+        void setBw_KHz(int khz);
+        
         /** spreading factor: trade-off between data rate and processing gain (link budget) */
         uint8_t getSf(void);
         void setSf(uint8_t sf);        
