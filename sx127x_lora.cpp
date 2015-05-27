@@ -21,6 +21,8 @@ SX127x_lora::SX127x_lora(SX127x& r) : m_xcvr(r)
     RegModemConfig.octet = m_xcvr.read_reg(REG_LR_MODEMCONFIG);
     RegModemConfig2.octet = m_xcvr.read_reg(REG_LR_MODEMCONFIG2);
     RegTest31.octet = m_xcvr.read_reg(REG_LR_TEST31);
+    RegTest33.octet = m_xcvr.read_reg(REG_LR_TEST33);     // invert_i_q
+    RegDriftInvert.octet = m_xcvr.read_reg(REG_LR_DRIFT_INVERT);
     
     // CRC for TX is disabled by default
     setRxPayloadCrcOn(true);
@@ -370,6 +372,21 @@ void SX127x_lora::setAgcAutoOn(bool on)
         m_xcvr.write_reg(REG_LR_MODEMCONFIG2, RegModemConfig2.octet);
     }
     
+}
+
+void SX127x_lora::invert_tx(bool inv)
+{
+    RegTest33.bits.chirp_invert_tx = !inv;
+    m_xcvr.write_reg(REG_LR_TEST33, RegTest33.octet);    
+}
+
+void SX127x_lora::invert_rx(bool inv)
+{
+    RegTest33.bits.invert_i_q = inv;
+    m_xcvr.write_reg(REG_LR_TEST33, RegTest33.octet);
+    /**/
+    RegDriftInvert.bits.invert_timing_error_per_symbol = !RegTest33.bits.invert_i_q;    
+    m_xcvr.write_reg(REG_LR_DRIFT_INVERT, RegDriftInvert.octet);
 }
 
 void SX127x_lora::start_tx(uint8_t len)

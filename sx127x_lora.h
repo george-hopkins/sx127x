@@ -44,6 +44,7 @@
 #define REG_LR_CAD_MIN_PEAK                         0x35
 #define REG_LR_DETECTION_THRESHOLD                  0x37
 #define REG_LR_SYNC_BYTE                            0x39    // default 0x12 (value of 0x21 will isolate network)
+#define REG_LR_DRIFT_INVERT                         0x3b  
 
 typedef union {
     struct {    // sx127x register 0x12
@@ -137,17 +138,32 @@ typedef union {
 
 typedef union {
     struct {    // sx127x register 0x33
-        uint8_t chirp_invert_tx    : 1;    // 0  invert TX spreading sequence
-        uint8_t chirp_invert_rx    : 1;    // 1  invert chip direction in RX mode
+        uint8_t chirp_invert_tx    : 1;    // 0  invert TX spreading sequence  (default=1)
+        uint8_t chirp_invert_rx    : 1;    // 1  invert chip direction in RX mode  (default=1)
         uint8_t sync_detect_th     : 1;    // 2  require 6dB despread SNR during preamble
         uint8_t invert_coef_phase  : 1;    // 3  
         uint8_t invert_coef_amp    : 1;    // 4
         uint8_t quad_correction_en : 1;    // 5  enable IQ compensation
-        uint8_t invert_i_q         : 1;    // 6  RX invert
+        uint8_t invert_i_q         : 1;    // 6  RX invert (default=0)
         uint8_t start_rambist      : 1;    // 7
     } bits;
     uint8_t octet;
 } RegTest33_t;
+
+typedef union {
+    struct {    // sx127x register 0x3b
+        uint8_t coarse_sync                     : 1;    // 0  must be set to 1
+        uint8_t fine_sync                       : 1;    // 1  must be clr to 0
+        uint8_t invert_timing_error_per_symbol  : 1;    // 2  set to !invert_i_q
+        uint8_t invert_freq_error               : 1;    // 3  
+        uint8_t invert_delta_sampling           : 1;    // 4    must be set to 1
+        uint8_t reserved                        : 1;    // 5    must be clr to 0
+        uint8_t invert_fast_timing              : 1;    // 6 
+        uint8_t invert_carry_in                 : 1;    // 7
+    } bits;
+    uint8_t octet;
+} RegDriftInvert_t;
+
 
 //class SX127x_lora : public SX127x
 class SX127x_lora {
@@ -230,6 +246,13 @@ class SX127x_lora {
           */
         int get_freq_error_Hz(void);
         
+        
+        /** invert transmitted spectrum */
+        void invert_tx(bool);
+        
+        /** invert spectrum on receiver */
+        void invert_rx(bool);
+        
         RegIrqFlags_t       RegIrqFlags;            // 0x12
         uint8_t             RegRxNbBytes;           // 0x13
         RegModemStatus_t    RegModemStatus;         // 0x18
@@ -244,6 +267,8 @@ class SX127x_lora {
         uint8_t             RegHopPeriod;           // 0x24
         RegModemConfig3_t   RegModemConfig3;        // 0x26
         RegTest31_t         RegTest31;              // 0x31
+        RegTest33_t         RegTest33;              // 0x33
+        RegDriftInvert_t    RegDriftInvert;         // 0x3b
         
         SX127x& m_xcvr;
 
