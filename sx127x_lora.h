@@ -42,8 +42,10 @@
 #define REG_LR_TEST33                               0x33    // invert IQ
 #define REG_LR_CAD_PEAK_TO_NOISE_RATIO              0x34
 #define REG_LR_CAD_MIN_PEAK                         0x35
+#define REG_LR_SX1276_AUTO_DRIFT                    0x36
 #define REG_LR_DETECTION_THRESHOLD                  0x37
 #define REG_LR_SYNC_BYTE                            0x39    // default 0x12 (value of 0x21 will isolate network)
+#define REG_LR_GAIN_DRIFT                           0x3a
 #define REG_LR_DRIFT_INVERT                         0x3b  
 
 typedef union {
@@ -149,6 +151,23 @@ typedef union {
     } bits;
     uint8_t octet;
 } RegTest33_t;
+
+typedef union {
+    struct {    // sx1276 register 0x36
+        uint8_t freq_to_time_drift_auto         : 1;    // 0  manual control of 0x3a register
+        uint8_t sd_max_freq_deviation_auto      : 1;    // 1  manual control of 0x3b[3:1]
+        uint8_t reserved                        : 6;    // 
+    } bits;
+    uint8_t octet;
+} RegAutoDrift_t;
+
+typedef union {
+    struct {    // sx127x register 0x3a
+        uint8_t freq_to_time_drift         : 6;    // 0,1,2,3,4,5  manual control of 0x3a register
+        uint8_t preamble_timing_gain       : 1;    // 6,7
+    } bits;
+    uint8_t octet;
+} RegGainDrift_t;
 
 typedef union {
     struct {    // sx127x register 0x3b

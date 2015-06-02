@@ -248,12 +248,33 @@ void SX127x_lora::setBw(uint8_t bw)
         return;
         
     if (m_xcvr.type == SX1276) {
+        RegAutoDrift_t auto_drift;
+        
         RegModemConfig.sx1276bits.Bw = bw;
         if (get_symbol_period() > 16)
             RegModemConfig3.sx1276bits.LowDataRateOptimize = 1;
         else
             RegModemConfig3.sx1276bits.LowDataRateOptimize = 0;
-        m_xcvr.write_reg(REG_LR_MODEMCONFIG3, RegModemConfig3.octet);            
+        m_xcvr.write_reg(REG_LR_MODEMCONFIG3, RegModemConfig3.octet);  
+        
+        auto_drift.octet = m_xcvr.read_reg(REG_LR_SX1276_AUTO_DRIFT);
+        if (bw == 9) {  // if 500KHz bw
+            RegGainDrift_t gd;
+            gd.octet = m_xcvr.read_reg(REG_LR_GAIN_DRIFT);
+            auto_drift.bits.freq_to_time_drift_auto = 0;
+            if (m_xcvr.HF) {
+                // > 525MHz
+                gd.bits.freq_to_time_drift = 0x24;
+            } else {
+                // < 525MHz
+                gd.bits.freq_to_time_drift = 0x3f;
+            }
+            m_xcvr.write_reg(REG_LR_GAIN_DRIFT, gd.octet);
+        } else {
+            auto_drift.bits.freq_to_time_drift_auto = 1;
+        }
+        m_xcvr.write_reg(REG_LR_SX1276_AUTO_DRIFT, auto_drift.octet);
+                  
     } else if (m_xcvr.type == SX1272) {
         RegModemConfig.sx1272bits.Bw = bw;
         if (get_symbol_period() > 16)
