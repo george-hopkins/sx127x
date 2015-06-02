@@ -18,11 +18,19 @@
 
 SX127x_lora::SX127x_lora(SX127x& r) : m_xcvr(r)
 {
+    if (!m_xcvr.RegOpMode.bits.LongRangeMode)
+        enable();
+        
     RegModemConfig.octet = m_xcvr.read_reg(REG_LR_MODEMCONFIG);
     RegModemConfig2.octet = m_xcvr.read_reg(REG_LR_MODEMCONFIG2);
     RegTest31.octet = m_xcvr.read_reg(REG_LR_TEST31);
     RegTest33.octet = m_xcvr.read_reg(REG_LR_TEST33);     // invert_i_q
     RegDriftInvert.octet = m_xcvr.read_reg(REG_LR_DRIFT_INVERT);
+    RegGainDrift.octet = m_xcvr.read_reg(REG_LR_GAIN_DRIFT);
+    
+    if (m_xcvr.type == SX1276) {
+        RegAutoDrift.octet = m_xcvr.read_reg(REG_LR_SX1276_AUTO_DRIFT);
+    }
     
     // CRC for TX is disabled by default
     setRxPayloadCrcOn(true);
@@ -64,21 +72,9 @@ void SX127x_lora::enable()
     m_xcvr.RegOpMode.bits.LongRangeMode = 1;
     m_xcvr.write_reg(REG_OPMODE, m_xcvr.RegOpMode.octet);
     
-    /*RegOpMode.octet = read_reg(REG_OPMODE);
-    printf("setloraon:%02x\r\n", RegOpMode.octet);*/
-    
-
-    /*                                // RxDone               RxTimeout                   FhssChangeChannel           CadDone
-    SX1272LR->RegDioMapping1 = RFLR_DIOMAPPING1_DIO0_00 | RFLR_DIOMAPPING1_DIO1_00 | RFLR_DIOMAPPING1_DIO2_00 | RFLR_DIOMAPPING1_DIO3_00;
-                                    // CadDetected          ModeReady
-    SX1272LR->RegDioMapping2 = RFLR_DIOMAPPING2_DIO4_00 | RFLR_DIOMAPPING2_DIO5_00;
-    SX1272WriteBuffer( REG_LR_DIOMAPPING1, &SX1272LR->RegDioMapping1, 2 );*/
     m_xcvr.RegDioMapping1.bits.Dio0Mapping = 0;    // DIO0 to RxDone
     m_xcvr.RegDioMapping1.bits.Dio1Mapping = 0;
     m_xcvr.write_reg(REG_DIOMAPPING1, m_xcvr.RegDioMapping1.octet);
-    
-    // todo: read LoRa regsiters
-    //SX1272ReadBuffer( REG_LR_OPMODE, SX1272Regs + 1, 0x70 - 1 );
         
     m_xcvr.set_opmode(RF_OPMODE_STANDBY);            
 }
@@ -247,34 +243,13 @@ void SX127x_lora::setBw(uint8_t bw)
     if (!m_xcvr.RegOpMode.bits.LongRangeMode)
         return;
         
-    if (m_xcvr.type == SX1276) {
-        RegAutoDrift_t auto_drift;
-        
+    if (m_xcvr.type == SX1276) {        
         RegModemConfig.sx1276bits.Bw = bw;
         if (get_symbol_period() > 16)
             RegModemConfig3.sx1276bits.LowDataRateOptimize = 1;
         else
             RegModemConfig3.sx1276bits.LowDataRateOptimize = 0;
-        m_xcvr.write_reg(REG_LR_MODEMCONFIG3, RegModemConfig3.octet);  
-        
-        auto_drift.octet = m_xcvr.read_reg(REG_LR_SX1276_AUTO_DRIFT);
-        if (bw == 9) {  // if 500KHz bw
-            RegGainDrift_t gd;
-            gd.octet = m_xcvr.read_reg(REG_LR_GAIN_DRIFT);
-            auto_drift.bits.freq_to_time_drift_auto = 0;
-            if (m_xcvr.HF) {
-                // > 525MHz
-                gd.bits.freq_to_time_drift = 0x24;
-            } else {
-                // < 525MHz
-                gd.bits.freq_to_time_drift = 0x3f;
-            }
-            m_xcvr.write_reg(REG_LR_GAIN_DRIFT, gd.octet);
-        } else {
-            auto_drift.bits.freq_to_time_drift_auto = 1;
-        }
-        m_xcvr.write_reg(REG_LR_SX1276_AUTO_DRIFT, auto_drift.octet);
-                  
+        m_xcvr.write_reg(REG_LR_MODEMCONFIG3, RegModemConfig3.octet);        
     } else if (m_xcvr.type == SX1272) {
         RegModemConfig.sx1272bits.Bw = bw;
         if (get_symbol_period() > 16)
@@ -306,21 +281,8 @@ void SX127x_lora::set_nb_trig_peaks(int n)
 void SX127x_lora::setSf(uint8_t sf)
 {
     if (!m_xcvr.RegOpMode.bits.LongRangeMode)
-        return;
-            
-    // false detections vs missed detections tradeoff
-    switch (sf) {
-        case 6:
-            set_nb_trig_peaks(3);
-            break;
-        case 7:
-            set_nb_trig_peaks(4);
-            break;
-        default:
-            set_nb_trig_peaks(5);
-            break;
-    }
-    
+        return; 
+
     // write register at 0x37 with value 0xc if at SF6
     if (sf < 7)
         m_xcvr.write_reg(REG_LR_DETECTION_THRESHOLD, 0x0c);
@@ -433,6 +395,47 @@ void SX127x_lora::start_rx()
         return; // fsk mode
     if (m_xcvr.RegOpMode.sx1276LORAbits.AccessSharedReg)
         return; // fsk page
+        
+    if (m_xcvr.type == SX1276) {
+        if (RegModemConfig.sx1276bits.Bw == 9) {  // if 500KHz bw: improved tolerance of reference frequency error
+            if (RegAutoDrift.bits.freq_to_time_drift_auto) {
+                RegAutoDrift.bits.freq_to_time_drift_auto = 0;
+                m_xcvr.write_reg(REG_LR_SX1276_AUTO_DRIFT, RegAutoDrift.octet);
+            }
+            if (m_xcvr.HF) {
+                // > 525MHz
+                if (RegGainDrift.bits.freq_to_time_drift != 0x24) {
+                    RegGainDrift.bits.freq_to_time_drift = 0x24;
+                    m_xcvr.write_reg(REG_LR_GAIN_DRIFT, RegGainDrift.octet);                    
+                }
+            } else {
+                // < 525MHz
+                if (RegGainDrift.bits.freq_to_time_drift != 0x3f) {
+                    RegGainDrift.bits.freq_to_time_drift = 0x3f;
+                    m_xcvr.write_reg(REG_LR_GAIN_DRIFT, RegGainDrift.octet); 
+                }
+            }
+
+        } else {
+            if (!RegAutoDrift.bits.freq_to_time_drift_auto) {
+                RegAutoDrift.bits.freq_to_time_drift_auto = 1;
+                m_xcvr.write_reg(REG_LR_SX1276_AUTO_DRIFT, RegAutoDrift.octet);
+            }
+        }
+    } // ... if (m_xcvr.type == SX1276)  
+    
+    // RX_CONTINUOUS: false detections vs missed detections tradeoff
+    switch (RegModemConfig2.sx1276bits.SpreadingFactor) {
+        case 6:
+            set_nb_trig_peaks(3);
+            break;
+        case 7:
+            set_nb_trig_peaks(4);
+            break;
+        default:
+            set_nb_trig_peaks(5);
+            break;
+    }   
         
     m_xcvr.set_opmode(RF_OPMODE_RECEIVER);
 

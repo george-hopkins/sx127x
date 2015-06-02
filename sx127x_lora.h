@@ -207,7 +207,7 @@ class SX127x_lora {
          */
         void start_tx(uint8_t len);
         
-        /** start receive mode
+        /** start continuous receive mode
          * @note the variable service_action needs to be monitored to indicate read_fifo() needs to be called to pull packet from FIFO.
          */
         void start_rx(void);
@@ -287,7 +287,10 @@ class SX127x_lora {
         RegModemConfig3_t   RegModemConfig3;        // 0x26
         RegTest31_t         RegTest31;              // 0x31
         RegTest33_t         RegTest33;              // 0x33
+        RegAutoDrift_t      RegAutoDrift;           // 0x36  sx1276 only
+        RegGainDrift_t      RegGainDrift;           // 0x3a
         RegDriftInvert_t    RegDriftInvert;         // 0x3b
+        
         
         SX127x& m_xcvr;
 
