@@ -50,7 +50,8 @@
 #define REG_DIOMAPPING2                             0x41
 #define REG_VERSION                                 0x42
 
-#define REG_PDSTRIM1                                0x5a
+#define REG_PDSTRIM1_SX1276                         0x4d
+#define REG_PDSTRIM1_SX1272                         0x5a
 #define REG_PLL                                     0x5C    // RX PLL bandwidth
 #define REG_BSYNCTST2                               0x67
 /******************************************************************************/
@@ -162,7 +163,7 @@ typedef union {
 /***************************************************/
 
 typedef union {
-    struct {    // sx1272 register 0x5a
+    struct {    // sx1272 register 0x5a (sx1276 0x4d)
         uint8_t prog_txdac             : 3;    // 0,1,2     BGR ref current to PA DAC
         uint8_t pds_analog_test        : 1;    // 3      
         uint8_t pds_pa_test            : 2;    // 4,5
