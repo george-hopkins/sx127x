@@ -235,6 +235,7 @@ void SX127x_fsk::start_tx(uint16_t arg_len)
         m_xcvr.write_reg(REG_DIOMAPPING1, m_xcvr.RegDioMapping1.octet);
     }
 
+    RegPktConfig1.octet = m_xcvr.read_reg(REG_FSK_PACKETCONFIG1);
     if (RegPktConfig1.bits.PacketFormatVariable) {
         pkt_buf_len = arg_len;
     } else {
