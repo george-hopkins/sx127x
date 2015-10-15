@@ -315,6 +315,7 @@ service_action_e SX127x_fsk::service()
     
     if (m_xcvr.RegOpMode.bits.Mode == RF_OPMODE_TRANSMITTER) {
         if (m_xcvr.dio0) {
+            wait_us(1000);
             m_xcvr.set_opmode(RF_OPMODE_STANDBY);
             return SERVICE_TX_DONE;
         }
