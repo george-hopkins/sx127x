@@ -447,13 +447,27 @@ void SX127x_lora::start_rx()
     m_xcvr.write_reg(REG_LR_FIFOADDRPTR, m_xcvr.read_reg(REG_LR_FIFORXBASEADDR));
 }
 
-float SX127x_lora::get_pkt_rssi()
+int SX127x_lora::get_pkt_rssi()
 {
-    /* TODO: calculating with pktSNR to give meaningful result below noise floor */
-    if (m_xcvr.type == SX1276)
-        return RegPktRssiValue - 137;
-    else
+    if (m_xcvr.type == SX1276) {
+        if (m_xcvr.HF)
+            return RegPktRssiValue - 157;
+        else
+            return RegPktRssiValue - 164;
+    } else
         return RegPktRssiValue - 125;
+}
+
+int SX127x_lora::get_current_rssi()
+{
+    uint8_t v = m_xcvr.read_reg(REG_LR_RSSIVALUE);
+    if (m_xcvr.type == SX1276) {
+        if (m_xcvr.HF)
+            return v - 157;
+        else
+            return v - 164;
+    } else
+        return v - 125;    
 }
 
 service_action_e SX127x_lora::service()

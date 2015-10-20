@@ -246,7 +246,8 @@ class SX127x_lora {
         bool getAgcAutoOn(void);
         void setAgcAutoOn(bool);
         
-        float get_pkt_rssi(void);
+        int get_pkt_rssi(void);
+        int get_current_rssi(void);
         
         /** retrieve symbol duration from bandwidth and spreading factor
          * @returns symbol duration in milliseconds
