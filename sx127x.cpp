@@ -50,8 +50,8 @@ void SX127x::init()
     }
     
     RegLna.octet = read_reg(REG_LNA);
-    radio.RegLna.bits.LnaBoostHF = 3;
-    radio.write_reg(REG_LNA, radio.RegLna.octet);    
+    RegLna.bits.LnaBoostHF = 3;
+    write_reg(REG_LNA, RegLna.octet);    
 }
 
 void SX127x::get_type()
