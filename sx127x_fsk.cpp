@@ -68,10 +68,10 @@ void SX127x_fsk::enable(bool fast)
         m_xcvr.write_reg(REG_FSK_SYNCCONFIG, RegSyncConfig.octet);
     }
     
-    if (RegPreambleDetect.bits.PreambleDetectorTol != 10) {
-        RegPreambleDetect.bits.PreambleDetectorTol = 10;
-        m_xcvr.write_reg(REG_FSK_PREAMBLEDETECT, RegPreambleDetect.octet);
-    }
+    fsk.RegPreambleDetect.bits.PreambleDetectorOn = 1;
+    fsk.RegPreambleDetect.bits.PreambleDetectorSize = 1;
+    fsk.RegPreambleDetect.bits.PreambleDetectorTol = 10;
+    radio.write_reg(REG_FSK_PREAMBLEDETECT, fsk.RegPreambleDetect.octet);      
     
     m_xcvr.set_opmode(RF_OPMODE_STANDBY);     
 }

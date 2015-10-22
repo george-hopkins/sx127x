@@ -38,7 +38,6 @@ void SX127x::init()
 
     RegOpMode.octet = read_reg(REG_OPMODE);
     RegPaConfig.octet = read_reg(REG_PACONFIG);
-    RegLna.octet = read_reg(REG_LNA);
     RegDioMapping1.octet = read_reg(REG_DIOMAPPING1);
     RegDioMapping2.octet = read_reg(REG_DIOMAPPING2);
     
@@ -49,6 +48,10 @@ void SX127x::init()
         RegPaConfig.bits.PaSelect = 1;
         write_reg(REG_PACONFIG, RegPaConfig.octet);
     }
+    
+    RegLna.octet = read_reg(REG_LNA);
+    radio.RegLna.bits.LnaBoostHF = 3;
+    radio.write_reg(REG_LNA, radio.RegLna.octet);    
 }
 
 void SX127x::get_type()
