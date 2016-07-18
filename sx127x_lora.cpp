@@ -31,9 +31,6 @@ SX127x_lora::SX127x_lora(SX127x& r) : m_xcvr(r)
     if (m_xcvr.type == SX1276) {
         RegAutoDrift.octet = m_xcvr.read_reg(REG_LR_SX1276_AUTO_DRIFT);
     }
-    
-    // CRC for TX is disabled by default
-    setRxPayloadCrcOn(true);
 }
 
 SX127x_lora::~SX127x_lora()
@@ -115,11 +112,13 @@ void SX127x_lora::setCodingRate(uint8_t cr)
 
 bool SX127x_lora::getHeaderMode(void)
 {
-    if (m_xcvr.type == SX1276)
+    if (m_xcvr.type == SX1276) {
+        RegModemConfig.octet = m_xcvr.read_reg(REG_LR_MODEMCONFIG);
         return RegModemConfig.sx1276bits.ImplicitHeaderModeOn;
-    else if (m_xcvr.type == SX1272)
+    } else if (m_xcvr.type == SX1272) {
+        RegModemConfig.octet = m_xcvr.read_reg(REG_LR_MODEMCONFIG);
         return RegModemConfig.sx1272bits.ImplicitHeaderModeOn;
-    else
+    } else
         return false;
 }
 
@@ -311,11 +310,15 @@ void SX127x_lora::setSf(uint8_t sf)
         
 bool SX127x_lora::getRxPayloadCrcOn(void)
 {
-    if (m_xcvr.type == SX1276)
+    /* RxPayloadCrcOn enables CRC generation in transmitter */
+    /* in implicit mode, this bit also enables CRC in receiver */
+    if (m_xcvr.type == SX1276) {
+        RegModemConfig2.octet = m_xcvr.read_reg(REG_LR_MODEMCONFIG2);
         return RegModemConfig2.sx1276bits.RxPayloadCrcOn;
-    else if (m_xcvr.type == SX1272)
+    } else if (m_xcvr.type == SX1272) {
+        RegModemConfig.octet = m_xcvr.read_reg(REG_LR_MODEMCONFIG);
         return RegModemConfig.sx1272bits.RxPayloadCrcOn;
-    else
+    } else
         return 0;
 }
 

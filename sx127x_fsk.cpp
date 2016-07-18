@@ -106,13 +106,17 @@ uint32_t SX127x_fsk::get_bitrate()
 
     if (br == 0)
         return 0;
-    else
-        return XTAL_FREQ / br;
+    else {
+        uint32_t bps = XTAL_FREQ / br;
+        bit_period_us = bps / 1000;
+        return bps;
+    }
 }
 
 void SX127x_fsk::set_bitrate(uint32_t bps)
 {
     uint16_t tmpBitrate = XTAL_FREQ / bps;
+    bit_period_us = bps / 1000;
     //printf("tmpBitrate:%d = %d / %d\r\n", tmpBitrate, XTAL_FREQ, bps);
     m_xcvr.write_u16(REG_FSK_BITRATEMSB, tmpBitrate);
 }
@@ -240,7 +244,6 @@ void SX127x_fsk::start_tx(uint16_t arg_len)
         pkt_buf_len = arg_len;
     } else {
         pkt_buf_len = RegPktConfig2.bits.PayloadLength;
-        printf("fixed-fmt %d\r\n", pkt_buf_len);
     }
 
     RegIrqFlags2.octet = m_xcvr.read_reg(REG_FSK_IRQFLAGS2);
@@ -267,7 +270,6 @@ void SX127x_fsk::start_tx(uint16_t arg_len)
                 printf("todo: fsk large packet\r\n");
             } else {
                 //setup_FifoLevel(NO_EDGE); // disable
-                printf("fixed-write-fifo %d\r\n", RegPktConfig2.bits.PayloadLength);
                 write_fifo(RegPktConfig2.bits.PayloadLength);
             }
         }
@@ -315,8 +317,12 @@ service_action_e SX127x_fsk::service()
     
     if (m_xcvr.RegOpMode.bits.Mode == RF_OPMODE_TRANSMITTER) {
         if (m_xcvr.dio0) {
-            wait_us(1000);
-            m_xcvr.set_opmode(RF_OPMODE_STANDBY);
+            /* packetSent comes at start of last bit, wait for one bit period */
+            wait_us(bit_period_us);
+            if (tx_done_sleep)
+                m_xcvr.set_opmode(RF_OPMODE_SLEEP);
+            else
+                m_xcvr.set_opmode(RF_OPMODE_STANDBY);
             return SERVICE_TX_DONE;
         }
     } else if (m_xcvr.RegOpMode.bits.Mode == RF_OPMODE_RECEIVER && m_xcvr.dio0) {

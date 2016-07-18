@@ -154,8 +154,8 @@ typedef union {
 
 typedef union {
     struct {    // sx1276 register 0x36
-        uint8_t freq_to_time_drift_auto         : 1;    // 0  manual control of 0x3a register
-        uint8_t sd_max_freq_deviation_auto      : 1;    // 1  manual control of 0x3b[3:1]
+        uint8_t freq_to_time_drift_auto         : 1;    // 0  manual control of 0x3a register (1=auto)
+        uint8_t sd_max_freq_deviation_auto      : 1;    // 1  manual control of 0x3b[3:1] (1=auto)
         uint8_t reserved                        : 6;    // 
     } bits;
     uint8_t octet;

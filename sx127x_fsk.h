@@ -313,9 +313,12 @@ class SX127x_fsk {
         RegTimerResol_t      RegTimerResol;       // 0x38
         RegImageCal_t        RegImageCal;         // 0x3b
         
+        bool tx_done_sleep; // false:go to standby after tx done, true:sleep
+        
         SX127x& m_xcvr;
         
     private:
+        unsigned int bit_period_us;
         uint32_t ComputeRxBw( uint8_t mantisse, uint8_t exponent );
         void ComputeRxBwMantExp( uint32_t rxBwValue, uint8_t* mantisse, uint8_t* exponent );     
                    
