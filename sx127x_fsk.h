@@ -137,6 +137,15 @@ typedef union {
 } RegPreambleDetect_t;
 
 typedef union {
+    struct {    // sx127x register 0x24
+        uint8_t ClkOut         : 3;   // 0,1,2
+        uint8_t rc_cal_trigger : 1;    // 3
+        uint8_t unused         : 4;  // 4,5,6,7
+    } bits;
+    uint8_t octet;
+} RegOsc_t;
+
+typedef union {
     struct {    // sx1232 register 0x27
         uint8_t SyncSize            : 3;    // 0,1,2
         uint8_t FifoFillCondition   : 1;    // 3    rx fifo fill starting 0=start-on-sync
@@ -292,6 +301,9 @@ class SX127x_fsk {
 
         uint32_t get_tx_fdev_hz(void);
         void set_tx_fdev_hz(uint32_t);
+        
+        uint8_t get_modulation_shaping(void);
+        void set_modulation_shaping(uint8_t);
         
         service_action_e service(void); // (SLIH) ISR bottom half 
         

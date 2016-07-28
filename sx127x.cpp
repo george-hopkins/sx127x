@@ -222,7 +222,7 @@ void SX127x::set_frf_MHz( float MHz )
 {
     uint32_t frf;
     
-    frf = MHz / FREQ_STEP_MHZ;
+    frf = MHz / (float)FREQ_STEP_MHZ;
     write_u24(REG_FRFMSB, frf);
     
     if (MHz < 525)
@@ -258,11 +258,15 @@ float SX127x::get_frf_MHz(void)
 
 void SX127x::hw_reset()
 {
-    /* only a french-swiss design would have hi-Z deassert */
+    int in = reset_pin.read();
     reset_pin.output();
     reset_pin.write(1);
-    wait(0.05);
+    wait(0.05);    
+    if (in == 1) { /* pin is pulled up somewhere? */
+        reset_pin.write(0);
+        wait(0.005);
+    }
     reset_pin.input();
-    wait(0.05);
+    wait(0.005);
 }
 

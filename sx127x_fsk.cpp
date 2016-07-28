@@ -282,15 +282,17 @@ void SX127x_fsk::start_tx(uint16_t arg_len)
 
 void SX127x_fsk::config_dio0_for_pktmode_rx()
 {
-    if (RegPktConfig1.bits.CrcOn) {
-        if (m_xcvr.RegDioMapping1.bits.Dio0Mapping != 1) {
-            m_xcvr.RegDioMapping1.bits.Dio0Mapping = 1; // to CrcOk
-            m_xcvr.write_reg(REG_DIOMAPPING1, m_xcvr.RegDioMapping1.octet);
-        }
-    } else { // Crc Off, use PayloadReady
-        if (m_xcvr.RegDioMapping1.bits.Dio0Mapping != 0) {
-            m_xcvr.RegDioMapping1.bits.Dio0Mapping = 0; // to PayloadReady
-            m_xcvr.write_reg(REG_DIOMAPPING1, m_xcvr.RegDioMapping1.octet);
+    if (RegPktConfig2.bits.DataModePacket) {
+        if (RegPktConfig1.bits.CrcOn) {
+            if (m_xcvr.RegDioMapping1.bits.Dio0Mapping != 1) {
+                m_xcvr.RegDioMapping1.bits.Dio0Mapping = 1; // to CrcOk
+                m_xcvr.write_reg(REG_DIOMAPPING1, m_xcvr.RegDioMapping1.octet);
+            }
+        } else { // Crc Off, use PayloadReady
+            if (m_xcvr.RegDioMapping1.bits.Dio0Mapping != 0) {
+                m_xcvr.RegDioMapping1.bits.Dio0Mapping = 0; // to PayloadReady
+                m_xcvr.write_reg(REG_DIOMAPPING1, m_xcvr.RegDioMapping1.octet);
+            }
         }
     }
 }
@@ -311,6 +313,33 @@ void SX127x_fsk::start_rx()
     m_xcvr.set_opmode(RF_OPMODE_RECEIVER);        
 }
 
+uint8_t SX127x_fsk::get_modulation_shaping()
+{
+    if (m_xcvr.type == SX1276) {
+        RegPaRamp_t reg_paramp;
+        reg_paramp.octet = m_xcvr.read_reg(REG_PARAMP);
+        return reg_paramp.bits.ModulationShaping;
+    } else if (m_xcvr.type == SX1272) {
+        m_xcvr.RegOpMode.octet = m_xcvr.read_reg(REG_OPMODE);
+        return m_xcvr.RegOpMode.bits.ModulationShaping;
+    } else
+        return 0xff;
+}
+
+void SX127x_fsk::set_modulation_shaping(uint8_t s)
+{
+    if (m_xcvr.type == SX1276) {
+        RegPaRamp_t reg_paramp;
+        reg_paramp.octet = m_xcvr.read_reg(REG_PARAMP);
+        reg_paramp.bits.ModulationShaping = s;
+        m_xcvr.write_reg(REG_PARAMP, reg_paramp.octet);
+    } else if (m_xcvr.type == SX1272) {
+        m_xcvr.RegOpMode.octet = m_xcvr.read_reg(REG_OPMODE);
+        m_xcvr.RegOpMode.bits.ModulationShaping = s;
+        m_xcvr.write_reg(REG_OPMODE, m_xcvr.RegOpMode.octet);
+    } 
+}
+
 service_action_e SX127x_fsk::service()
 {
     int i;
@@ -325,7 +354,7 @@ service_action_e SX127x_fsk::service()
                 m_xcvr.set_opmode(RF_OPMODE_STANDBY);
             return SERVICE_TX_DONE;
         }
-    } else if (m_xcvr.RegOpMode.bits.Mode == RF_OPMODE_RECEIVER && m_xcvr.dio0) {
+    } else if (RegPktConfig2.bits.DataModePacket && m_xcvr.RegOpMode.bits.Mode == RF_OPMODE_RECEIVER && m_xcvr.dio0) {
         if (RegRxConfig.bits.AfcAutoOn)
             RegAfcValue = m_xcvr.read_s16(REG_FSK_AFCMSB);
             

@@ -52,7 +52,9 @@
 
 #define REG_PDSTRIM1_SX1276                         0x4d
 #define REG_PDSTRIM1_SX1272                         0x5a
-#define REG_PLL                                     0x5C    // RX PLL bandwidth
+#define REG_PLL_SX1272                              0x5c    // RX PLL bandwidth
+#define REG_PLL_LOWPN_SX1272                        0x5e
+#define REG_PLL_SX1276                              0x70 
 #define REG_BSYNCTST2                               0x67
 /******************************************************************************/
 
@@ -137,6 +139,15 @@ typedef union {
     uint8_t octet;
 } RegLna_t; // RXFE
 
+typedef union {
+    struct {    // sx127x register 0x0a
+        uint8_t PaRamp             : 4;    // 0,1,2,3
+        uint8_t LowPnTxPllOff      : 1;    // 4        sx1272 only
+        uint8_t ModulationShaping  : 2;    // 5,6      sx1276 only
+        uint8_t unused             : 1;    // 7
+    } bits;
+    uint8_t octet;
+} RegPaRamp_t; //
 
 /*********************** ****************************/
 

@@ -23,7 +23,6 @@ SX127x_lora::SX127x_lora(SX127x& r) : m_xcvr(r)
         
     RegModemConfig.octet = m_xcvr.read_reg(REG_LR_MODEMCONFIG);
     RegModemConfig2.octet = m_xcvr.read_reg(REG_LR_MODEMCONFIG2);
-    RegTest31.octet = m_xcvr.read_reg(REG_LR_TEST31);
     RegTest33.octet = m_xcvr.read_reg(REG_LR_TEST33);     // invert_i_q
     RegDriftInvert.octet = m_xcvr.read_reg(REG_LR_DRIFT_INVERT);
     RegGainDrift.octet = m_xcvr.read_reg(REG_LR_GAIN_DRIFT);
@@ -31,6 +30,8 @@ SX127x_lora::SX127x_lora(SX127x& r) : m_xcvr(r)
     if (m_xcvr.type == SX1276) {
         RegAutoDrift.octet = m_xcvr.read_reg(REG_LR_SX1276_AUTO_DRIFT);
     }
+    
+
 }
 
 SX127x_lora::~SX127x_lora()
@@ -72,6 +73,10 @@ void SX127x_lora::enable()
     m_xcvr.RegDioMapping1.bits.Dio0Mapping = 0;    // DIO0 to RxDone
     m_xcvr.RegDioMapping1.bits.Dio1Mapping = 0;
     m_xcvr.write_reg(REG_DIOMAPPING1, m_xcvr.RegDioMapping1.octet);
+    
+    RegTest31.octet = m_xcvr.read_reg(REG_LR_TEST31);    
+    RegTest31.bits.if_freq_auto = 0;    // improved RX spurious rejection
+    m_xcvr.write_reg(REG_LR_TEST31, RegTest31.octet);    
         
     m_xcvr.set_opmode(RF_OPMODE_STANDBY);            
 }
@@ -392,7 +397,7 @@ void SX127x_lora::start_tx(uint8_t len)
     m_xcvr.set_opmode(RF_OPMODE_TRANSMITTER);
 }
 
-void SX127x_lora::start_rx()
+void SX127x_lora::start_rx(chip_mode_e mode)
 {
     if (!m_xcvr.RegOpMode.bits.LongRangeMode)
         return; // fsk mode
@@ -440,7 +445,7 @@ void SX127x_lora::start_rx()
             break;
     }   
         
-    m_xcvr.set_opmode(RF_OPMODE_RECEIVER);
+    m_xcvr.set_opmode(mode);
 
     if (m_xcvr.RegDioMapping1.bits.Dio0Mapping != 0) {
         m_xcvr.RegDioMapping1.bits.Dio0Mapping = 0;    // DIO0 to RxDone

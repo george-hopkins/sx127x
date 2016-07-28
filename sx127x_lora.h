@@ -208,9 +208,10 @@ class SX127x_lora {
         void start_tx(uint8_t len);
         
         /** start continuous receive mode
+         * @param mode RF_OPMODE_RECEIVER or RF_OPMODE_RECEIVER_SINGLE
          * @note the variable service_action needs to be monitored to indicate read_fifo() needs to be called to pull packet from FIFO.
          */
-        void start_rx(void);
+        void start_rx(chip_mode_e mode);
         
         /** Called by main program when indicated by service_action variable, to pull recevied packet from radio FIFO.
          * @returns count of bytes received
