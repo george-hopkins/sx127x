@@ -354,7 +354,7 @@ service_action_e SX127x_fsk::service()
                 m_xcvr.set_opmode(RF_OPMODE_STANDBY);
             return SERVICE_TX_DONE;
         }
-    } else if (RegPktConfig2.bits.DataModePacket && m_xcvr.RegOpMode.bits.Mode == RF_OPMODE_RECEIVER && m_xcvr.dio0) {
+    } else if (RegPktConfig2.bits.DataModePacket && m_xcvr.dio0) {
         if (RegRxConfig.bits.AfcAutoOn)
             RegAfcValue = m_xcvr.read_s16(REG_FSK_AFCMSB);
             
