@@ -218,7 +218,7 @@ class SX127x {
          * @param fem_cps rx-tx switch for LF bands (vhf/433)
          */
          
-        SX127x(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName rst, PinName dio_0, PinName dio_1);
+        SX127x(PinName dio0, PinName dio_1, PinName cs, SPI&, PinName rst);
         
         ~SX127x();
         
@@ -307,7 +307,7 @@ class SX127x {
         DigitalIn dio0;
         DigitalIn dio1;
         DigitalOut m_cs;
-        SPI m_spi;
+        SPI& m_spi;
         bool HF;    // sx1272 is always HF   
 
         /*! board-specific RF switch callback, called whenever operating mode is changed
@@ -316,13 +316,12 @@ class SX127x {
          *      PE4259-63: controlled directly by radio chip, no software function needed
          *      SKY13350-385LF: two separate control lines, requires two DigitalOut pins
          */
-        FunctionPointer rf_switch;
+        Callback<void()> rf_switch;
          
     private:    
         DigitalInOut reset_pin;        
         
     protected:
-        //FunctionPointer _callback_rx;
         
 };
 

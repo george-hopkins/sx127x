@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-SX127x::SX127x(PinName mosi, PinName miso, PinName sclk, PinName cs, PinName rst, PinName dio_0, PinName dio_1) :
-                m_spi(mosi, miso, sclk),                  m_cs(cs), reset_pin(rst), dio0(dio_0), dio1(dio_1)
+SX127x::SX127x(PinName dio_0, PinName dio_1, PinName cs, SPI& spi_r, PinName rst) :
+                dio0(dio_0), dio1(dio_1), m_cs(cs), m_spi(spi_r), reset_pin(rst)
 {
     reset_pin.input();
     m_cs = 1;
