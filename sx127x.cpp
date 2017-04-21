@@ -213,7 +213,8 @@ void SX127x::set_opmode(chip_mode_e mode)
     RegOpMode.bits.Mode = mode;
     
     // callback to control antenna switch and PaSelect (PABOOST/RFO) for TX
-    rf_switch.call();
+    if (rf_switch)
+        rf_switch.call();
     
     write_reg(REG_OPMODE, RegOpMode.octet);
 }
