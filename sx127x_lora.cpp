@@ -463,7 +463,7 @@ int SX127x_lora::get_pkt_rssi()
         else
             return RegPktRssiValue - 164;
     } else
-        return RegPktRssiValue - 125;
+        return RegPktRssiValue - 139;
 }
 
 int SX127x_lora::get_current_rssi()
@@ -475,7 +475,7 @@ int SX127x_lora::get_current_rssi()
         else
             return v - 164;
     } else
-        return v - 125;    
+        return v - 139;
 }
 
 service_action_e SX127x_lora::service()
